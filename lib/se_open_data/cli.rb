@@ -558,12 +558,20 @@ HERE
 
       Log.debug "Creating #{config.VIRTUOSO_SCRIPT_LOCAL}"
 
-      content = fetch config.ESSGLOBAL_URI + "vocab/"
-      IO.write File.join(config.GEN_VIRTUOSO_DIR, "essglobal_vocab.rdf"), content
-
-      content = fetch config.ESSGLOBAL_URI + "standard/organisational-structure"
-      IO.write File.join(config.GEN_VIRTUOSO_DIR, "organisational-structure.skos"), content
-
+      datafiles = {
+        "vocab/" => "essglobal_vocab.rdf",
+        "standard/organisational-structure" => "organisational-structure.skos",
+        "standard/activities" => "activities.skos",
+        "standard/activities-ica" => "activities-ica.skos",
+        "standard/activities-modified" => "activities-modified.skos",
+        "standard/base-membership-type" => "base-membership-type.skos",
+        "standard/qualifiers" => "qualifiers.skos",
+      }
+      datafiles.each do |src, dst|
+        content = fetch config.ESSGLOBAL_URI + src
+        IO.write File.join(config.GEN_VIRTUOSO_DIR, dst), content
+      end
+      
       puts "Creating #{config.VIRTUOSO_NAMED_GRAPH_FILE}"
       IO.write config.VIRTUOSO_NAMED_GRAPH_FILE, config.GRAPH_NAME
 
