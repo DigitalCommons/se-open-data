@@ -560,12 +560,12 @@ HERE
 
       datafiles = {
         "vocab/" => "essglobal_vocab.rdf",
-        "standard/organisational-structure" => "organisational-structure.skos",
-        "standard/activities" => "activities.skos",
-        "standard/activities-ica" => "activities-ica.skos",
-        "standard/activities-modified" => "activities-modified.skos",
-        "standard/base-membership-type" => "base-membership-type.skos",
-        "standard/qualifiers" => "qualifiers.skos",
+        "standard/organisational-structure" => "organisational-structure.rdf",
+        "standard/activities" => "activities.rdf",
+        "standard/activities-ica" => "activities-ica.rdf",
+        "standard/activities-modified" => "activities-modified.rdf",
+        "standard/base-membership-type" => "base-membership-type.rdf",
+        "standard/qualifiers" => "qualifiers.rdf",
       }
       datafiles.each do |src, dst|
         content = fetch config.ESSGLOBAL_URI + src
@@ -584,7 +584,6 @@ password=${1?Please supply a password}
 isql-vt -H localhost -U dba -P "$password" <<SQL && rm -rf #{config.VIRTUOSO_DATA_DIR}
 SPARQL CLEAR GRAPH '#{config.GRAPH_NAME}';
 ld_dir('#{config.VIRTUOSO_DATA_DIR}','*.rdf',NULL);
-ld_dir('#{config.VIRTUOSO_DATA_DIR}','*.skos',NULL);
 rdf_loader_run();
 
 select ll_file, ll_error from DB.DBA.load_list where ll_file like '#{config.VIRTUOSO_DATA_DIR}%' and ll_error is not null;
