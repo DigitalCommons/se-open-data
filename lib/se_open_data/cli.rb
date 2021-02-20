@@ -578,6 +578,9 @@ HERE
       IO.write config.VIRTUOSO_NAMED_GRAPH_FILE, config.GRAPH_NAME
 
       puts "Creating #{config.VIRTUOSO_SCRIPT_LOCAL}"
+
+      # Info about isql commands here:
+      # http://docs.openlinksw.com/virtuoso/virtuoso_clients_isql/
       IO.write config.VIRTUOSO_SCRIPT_LOCAL, <<HERE
 #!/bin/sh
 
