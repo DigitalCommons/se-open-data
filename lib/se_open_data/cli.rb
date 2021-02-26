@@ -556,9 +556,9 @@ HERE
       pass = SeOpenData::Utils::PasswordStore.new(use_env_vars: config.USE_ENV_PASSWORDS)
       Log.debug "Checking ENV for passwords" if pass.use_env_vars?
 
-      FileUtils.remove_dir config.GEN_VIRTUOSO_DIR
-      Log.debug "Creating #{config.GEN_VIRTUOSO_DIR}"
-      FileUtils.mkdir_p config.GEN_VIRTUOSO_DIR
+#      FileUtils.remove_dir config.GEN_VIRTUOSO_DIR
+#      Log.debug "Creating #{config.GEN_VIRTUOSO_DIR}"
+#      FileUtils.mkdir_p config.GEN_VIRTUOSO_DIR
       
       datafiles = {
         "vocab/" => "essglobal_vocab.rdf",
