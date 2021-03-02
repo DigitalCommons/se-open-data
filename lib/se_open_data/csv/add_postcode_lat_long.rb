@@ -9,6 +9,7 @@ end
 module SeOpenData
   module CSV
     require "se_open_data/csv/schemas"
+    require "se_open_data/csv/standard"
 
     # The latest output schema
     StdSchema = SeOpenData::CSV::Schemas::Versions[-1]
