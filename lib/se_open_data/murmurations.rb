@@ -34,7 +34,7 @@ module SeOpenData
 
     def self.to_location(fields)
       location = {
-        country: fields['Country ID'].to_s,
+        country: 'GB', ## FIXME a hack!  needs converting from a country name
         locality: fields['Locality'].to_s.slice(0, 100),
         region: fields['Region'].to_s.slice(0, 100),
       }.delete_if {|k, v| v.size == 0 }
