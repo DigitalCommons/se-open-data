@@ -138,7 +138,7 @@ module SeOpenData
                           locality: locality,
                           region: '',
                           postcode: postcode.to_s.upcase,
-                          country_name: '',
+                          country_name: 'GB',
                           homepage: Types.normalise_url(website),
                           # blank sensitive data until new institutional email field added
                           #phone: normalise_phone_number(phone),
