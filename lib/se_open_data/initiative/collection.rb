@@ -41,11 +41,13 @@ module SeOpenData
         each {|initiative|
           initiative.rdf.save_rdfxml(outdir)
           initiative.rdf.save_turtle(outdir)
+          initiative.rdf.save_json_ld(outdir)
           initiative.html.save(outdir)
           counter.step
         }
         rdf.save_index_rdfxml(outdir)
         rdf.save_index_turtle(outdir)
+        rdf.save_index_json_ld(outdir)
         rdf.save_one_big_rdfxml(outdir)
         # Skip saving the one big turtle, because we send only the RDF/XML file to the triplestore
         # and generating this takes a while.

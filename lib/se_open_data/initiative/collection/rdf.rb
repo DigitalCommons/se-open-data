@@ -31,6 +31,16 @@ module SeOpenData
 	        }
 	        $stdout.write "\n"
 	      end
+	      def save_index_json_ld(outdir)
+	        f = collection.index_filename(outdir, ".json")
+	        $stdout.write "Saving #{f}..."
+	        JSON::LD::Writer.open(f,
+                                      standard_prefixes: true,
+                                      prefixes: config.prefixes) do |writer|
+	          writer << index_graph
+	        end
+	        $stdout.write "\n"
+	      end
 	      def save_one_big_rdfxml(outdir)
 	        f = collection.one_big_filename(config.one_big_file_basename, ".rdf")
 	        $stdout.write "Saving #{f}..."

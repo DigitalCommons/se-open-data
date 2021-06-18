@@ -26,6 +26,32 @@ module SeOpenData
         }
       end
 
+      def save_json_ldx(outdir)
+        json_ld = JSON::LD::API::fromRdf(graph)
+        context = JSON.parse %({
+          "@context": { "name": "http://purl.org/goodrelations/v1#name" }
+        })
+        f = File.name(initiative.id, outdir, ".json")
+        ::File.open(f, 'w') do |writer|
+          writer << json_ld #JSON::LD::API.compact(json_ld, {})
+        end
+      end
+      
+      def save_json_ldy(outdir)
+        json_ld = JSON::LD::API::fromRdf(graph)
+        f = File.name(initiative.id, outdir, ".json")
+        JSON::LD::Writer.open(f) do |writer|
+          writer << graph
+        end
+      end
+      def save_json_ld(outdir)
+        json_ld = JSON::LD::API::fromRdf(graph)
+        f = File.name(initiative.id, outdir, ".json")
+        ::File.open(f, 'w') do |writer|
+          writer << JSON.pretty_generate(json_ld.compact)
+        end
+      end
+      
       def graph
         @graph ||= make_graph
       end
