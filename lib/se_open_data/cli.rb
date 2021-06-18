@@ -1,6 +1,7 @@
 # coding: utf-8
 require "shellwords"
 require "pathname"
+require "se_open_data/murmurations"
 require "se_open_data/utils/log_factory"
 require "se_open_data/utils/deployment"
 
@@ -408,6 +409,14 @@ module SeOpenData
       IO.write config.SPARQL_ENDPOINT_FILE, config.SPARQL_ENDPOINT + "\n"
       IO.write config.SPARQL_GRAPH_NAME_FILE, config.GRAPH_NAME + "\n"
 
+      # Convert CSV into Murmurations data structures
+      ::CSV.foreach(config.STANDARD_CSV, headers:true) do |row|
+        next if row.header_row?
+
+        output_file = File.join(doc_dir, "#{row['Identifier']}.murm.json")
+        SeOpenData::Murmurations.write(config.GRAPH_NAME, row.to_h, output_file)
+      end
+      
       rdf_config = SeOpenData::Initiative::RDF::Config.new(
         config.GRAPH_NAME,
         config.ESSGLOBAL_URI,
