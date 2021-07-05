@@ -1,6 +1,9 @@
 # coding: utf-8
 require "shellwords"
 require "pathname"
+require "csv"
+require "json"
+require "httparty"
 require "se_open_data/murmurations"
 require "se_open_data/utils/log_factory"
 require "se_open_data/utils/deployment"
@@ -655,6 +658,120 @@ HERE
       raise e
     end
 
+    # Runs the `post_success` script in the current directory, if present.
+    #
+    # The post_success command is intended to allow arbitrary
+    # post-success operations to be added, such as notifications to
+    # other systems.  It should only be run after successful
+    # completion, and not if any step failed.
+    #
+    # Note, although typically we expect the script to be written in
+    # Ruby and use the SeOpenData library, we don't assume that and
+    # invoke it as a separate process, to allow other languages and
+    # tools to be used.
+    #
+    # @return true on success, false on failure, or 100 (an
+    # arbitrarily chosen code) to indicate there is no post_success
+    # script, or that the script determinied there was nothing to do.
+    # This allows success-with-an-action, success-but-no-action, and
+    # failure to be distinguished.
+    def self.command_post_success
+      converter_file = File.join(Dir.pwd, "post_success")
+      unless File.exist? converter_file
+        raise ArgumentError, "no 'post_success' file found in current directory"
+      end
+      unless system converter_file
+        raise "'post_success' command in current directory failed"
+      end
+      return true
+    rescue => e
+      warn e.message
+      return false
+    end
+
+
+    # Attempts to register all initiatives on the configured murmurations index
+    # server.
+    #
+    # Assumes that the normalised data file exists at and contains data (the file
+    # config.STANDARD_CSV)
+    #
+    # @return true on success, false on failure, or 100 (an
+    # arbitrarily chosen code) if there were no initiatives to
+    # register.
+    def self.command_murmurations_registration
+      config = load_config
+      uri_base = config.GRAPH_NAME
+      delay = 5 # seconds between calls
+      index_url = config.fetch('MURMURATIONS_INDEX_URL', 'https://index.murmurations.network/v1/nodes')
+      ids = []
+      ::CSV.foreach(config.STANDARD_CSV, headers:true) do |row|
+        next if row.header_row?
+
+        ids << row['Identifier']
+      end
+        
+      if ids.empty?
+        Log.warn "No IDs to register"
+        return 100 # nothing to do
+      end
+
+      failed = {}
+
+      Log.info "Registering #{ids.size} initiatives on murmuations index at #{index_url}"
+      ids.each do |id|
+        sleep(delay)
+        
+        profile_url = File.join(config.GRAPH_NAME, id + '.murm.json')
+        response = HTTParty.post(index_url, body: { profile_url: profile_url }.to_json)
+        unless response.code == 200
+          reason = failed[id] = "registration failed with status #{response.code}"
+          Log.warn "ID #{id}: #{reason}"
+          Log.debug response.body
+          next
+        end
+        
+        murm_id = response.parsed_response.dig('data', 'node_id')
+        unless murm_id
+          reason = failed[id] = "registration gave no murmurations id"
+          Log.warn "ID #{id}: #{reason}"
+          Log.debug response.body
+          next
+        end
+        
+        # Now check the result validated
+        response = HTTParty.get(File.join(index_url, murm_id.to_s))
+        unless response.code == 200
+          reason = failed[id] = "status check failed with status #{response.code}"
+          Log.warn "ID #{id}: #{reason}"
+          Log.debug response.body
+          next
+        end
+
+        content = response.parsed_response
+        unless %w(posted received validated).include? content.dig('data', 'status')
+          reasons = content.dig('data', 'failure_reasons') || [response.body]
+          reason = failed[id] = "validation failed: #{reasons.join('; ')}"
+          Log.warn "ID #{id}: #{reason}"
+          Log.debug response.body
+          next
+        end
+
+        # Success for this ID!
+        Log.info "ID #{id}: registered and validated ok"
+      end
+
+      unless failed.empty?
+        reason = "failed to successfully register ids #{failed.keys.join(', ')}"
+        warn reason
+        Log.error reason
+        return false
+      end
+
+      # Success!
+      return true
+    end
+    
     # Gets the content of an URL, following redirects
     #
     # Also sets the 'Accept: application/rdf+xml' header.
