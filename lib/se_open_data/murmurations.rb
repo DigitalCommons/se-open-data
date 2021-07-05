@@ -20,7 +20,7 @@ module SeOpenData
       # Identifier,Name,Description,Organisational Structure,Primary Activity,Activities,Street Address,Locality,Region,Postcode,Country ID,Territory ID,Website,Phone,Email,Twitter,Facebook,Companies House Number,Qualifiers,Membership Type,Latitude,Longitude,Geo Container,Geo Container Latitude,Geo Container Longitude
       raise "No Identifier field!" unless fields.has_key? 'Identifier'
       data = {
-        linked_schemas: %w(solidarity_economy_initiatives-v0.1.0),
+        linked_schemas: %w(solidarity_economy_initiatives-v0.1.0 murmurations_map-v1),
         ld_uri: File.join(uri_base,fields['Identifier']),
         name: fields['Name'].to_s.strip.slice(0, 100),
         description: fields['Description'].to_s,
@@ -28,6 +28,9 @@ module SeOpenData
         location: to_location(fields),
         geolocation: to_geolocation(fields),
         org_type_tags: to_org_type_tags(fields),
+        urls: [
+          {name: 'Website', url: fields['Website'].to_s},
+        ],
       }.delete_if {|k, v| v == nil || v.size == 0 }
       
       IO.write(output_file, JSON.pretty_generate(data))
