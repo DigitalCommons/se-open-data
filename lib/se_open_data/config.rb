@@ -245,11 +245,29 @@ module SeOpenData
 
     # Loads a config file relative to the current working directory
     #
+    # The path argument, if supplied, can be a path, filename, or a
+    # Dir.glob supported pattern.
+    #
+    # If a pattern, the first matching file is used.
+    #
+    # However, if path is nil and an environment variable
+    # `SEOD_CONFIG` is set, that is used to set the value path. The
+    # same logic above applies.
+    #
     # @param path [String] a path to the config file, or a file-glob
     # pattern which expands to more than one path, in order of
     # preference. Relative to the current working directory.
     # @return [SeOpenData::Config]
-    def self.load(path = "{local,default}.conf", base: Dir.pwd)
+    def self.load(path = nil, base: Dir.pwd)
+      if path == nil
+        if ENV.has_key? "SEOD_CONFIG"
+          # Use this environment variable to define where the config is
+          path = ENV["SEOD_CONFIG"]
+        else
+          path = "{local,default}.conf"
+        end
+      end
+
       config_file = Dir.glob(path, base: base).first # first match
       if config_file.nil?
         raise RuntimeError, "No config file found matching: #{path}"
