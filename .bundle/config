@@ -1,0 +1,6 @@
+---
+BUNDLE_PATH: ".gems"
+BUNDLE_BIN: ".gems/bin"
+BUNDLE_GLOBAL_GEM_CACHE: "true"
+BUNDLE_CACHE_ALL: "true"
+BUNDLE_CACHE_PATH: "../caches/gems"
