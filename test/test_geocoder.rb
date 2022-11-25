@@ -22,17 +22,35 @@ DataDir = __dir__+"/data"
 #  end
 #end
 
+pass = SeOpenData::Utils::PasswordStore.new
+api_key = pass.get 'geoapifyAPI.txt' # config.GEOCODER_API_KEY_PATH
+
+
 describe SeOpenData::CSV::Standard::GeoapifyStandard do
 
-  describe "basic" do
-    #config = SeOpenData::Config.load
-    pass = SeOpenData::Utils::PasswordStore.new
-    api_key = pass.get 'geoapifyAPI.txt' # config.GEOCODER_API_KEY_PATH
+#  describe "basic" do
+#    #config = SeOpenData::Config.load
+#    geocoder = SeOpenData::CSV::Standard::GeoapifyStandard::Geocoder.new(api_key)
+#    search_key = 'PO Box 767, Tanunda, Saudi Arabia, 5352, Australia'
+#    country = 'Saudi Arabia'
+#    cached_entry = geocoder.get_new_data(search_key, country)
+#    puts cached_entry
+#    it "should er.." do
+#      true
+#    end
+#  end
+  
+  describe "basic2" do
+    cachefile = '/tmp/geocoder_cache' # FIXME hack!
     geocoder = SeOpenData::CSV::Standard::GeoapifyStandard::Geocoder.new(api_key)
-    search_key = 'PO Box 767, Tanunda, Saudi Arabia, 5352, Australia'
-    country = 'Saudi Arabia'
-    cached_entry = geocoder.get_new_data(search_key, country)
-    puts cached_entry
+    global_postcode_client = SeOpenData::RDF::OsPostcodeGlobalUnit::Client.new(cachefile, geocoder)
+
+    address = ['PO Box 767','Tanunda', 'SA', '5352']
+    country = 'AU'
+    pcunit = global_postcode_client.get(address, country)
+    
+    #config = SeOpenData::Config.load
+    puts pcunit
     it "should er.." do
       true
     end
