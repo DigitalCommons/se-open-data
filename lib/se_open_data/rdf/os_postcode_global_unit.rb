@@ -60,14 +60,18 @@ module SeOpenData
           address_array.map! { |addr| uk_postcode?(addr) ? addr.gsub(/[!@#$%^&*-]/, " ") : addr } # remove special characters
 
           # Expand 2-letter country codes, hackily (best effort, this is all hacky already)
-          address_array.map! do |addr|
-            addr.match(/^[A-Z][A-Z]$/)? NormalizeCountry(addr, to: :short) : addr
+          # With an added hack for https://github.com/digitalcommons/dotcoop-project/issues/28
+          if address_array.join(", ") !~ /Tanunda/
+            address_array.map! do |addr|
+              addr.match(/^[A-Z][A-Z]$/)? NormalizeCountry(addr, to: :short) : addr
+            end
           end
           search_key = address_array.join(", ")
           Log.info "Geocoding: #{search_key}";
           return nil unless search_key
           return search_key
         end
+
 
         # Has to include standard cache headers or returns nil
         def get(address_array, country)
