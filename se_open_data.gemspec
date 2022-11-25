@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency('httparty')
   s.add_runtime_dependency('i18n')
   s.add_runtime_dependency('levenshtein')
-  s.add_runtime_dependency('linkeddata')
+  s.add_runtime_dependency('linkeddata', '>= 3.2')
   s.add_runtime_dependency('nokogiri')
   s.add_runtime_dependency('normalize_country')
   s.add_runtime_dependency('opencage-geocoder')
