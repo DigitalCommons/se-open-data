@@ -1,0 +1,412 @@
+@base <https://dev.lod.coop/essglobal/2.1/standard/activities/> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix essglobal: <https://dev.lod.coop/essglobal/2.1/standard/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<> a skos:ConceptScheme;
+  dc:contributor "Ana Alice Baptista (analice@dsi.uminho.pt)",
+    "Daniel Tygel (dtygel@gmail.com)",
+    "Jason Nardi (jason.nardi@gmail.com)",
+    "Marc Alphandery (marc.alphandery@wanadoo.fr)",
+    "Mariana Malta (mariana@iscap.ipp.pt)";
+  dc:creator "César Araújo (cesar_araujo@sapo.pt)",
+    "Leonardo Cruz (leonardopscruz@gmail.com)",
+    "Rodrigo Alves (rasalves@gmail.com)",
+    "Sérgio Vale (gks_sergio@hotmail.com)";
+  dc:description "Activities controlled vocabulary for SSE"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  dc:language "en-en";
+  dc:modified "2022-01-26"^^xsd:date;
+  dc:publisher <http://www.ripess.org/>;
+  dc:relation <http://www.dsi.uminho.pt/>;
+  dc:title "Activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  dcterms:created "2012-02-20"^^xsd:date;
+  dcterms:publisher "ESSGLOBAL" .
+
+<a01> a skos:Concept;
+  skos:altLabel "Agriculture, forestry and fishing"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Agriculture and environment"@en,
+    "Agricultura y medio ambiente"@es,
+    "Agriculture et environnement"@fr,
+    ""@ko,
+    "Agricultura e ambiente"@pt;
+  skos:scopeNote "Integrates the sectors of agriculture, forestry and fishing"@en,
+    "Integra los sectores de la agricultura, la silvicultura y la pesca"@es,
+    "Intègre les secteurs de l'agriculture, la sylviculture et la pêche"@fr,
+    ""@ko,
+    "Integra os setores da agricultura, silvicultura e pesca"@pt .
+
+<a02> a skos:Concept;
+  skos:altLabel "Mining and quarrying"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Mining and quarrying"@en,
+    "Mineria y canteras"@es,
+    "Mines et carrières"@fr,
+    ""@ko,
+    "Indústria extrativa"@pt;
+  skos:scopeNote "Integra sectors of the extractive industry"@en,
+    "Integra los sectores de la industria extractiva"@es,
+    "Integra secteurs de l'industrie extractive"@fr,
+    ""@ko,
+    "Integra os setores da Indústria extrativista"@pt .
+
+<a03> a skos:Concept;
+  skos:altLabel "Manufacturing"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Craftmanship and manufacturing"@en,
+    "Producción industrial y artesanal"@es,
+    "Artisanat et manifacturier"@fr,
+    ""@ko,
+    "Artesanato e manufatura"@pt;
+  skos:scopeNote "Integrates the manufacturing sectors"@en,
+    "Integra los sectores manufactureros"@es,
+    "Intègre les secteurs de la fabrication"@fr,
+    ""@ko,
+    "Integra os setores de fabrico"@pt .
+
+<a04> a skos:Concept;
+  skos:altLabel "Electricity, gas, steam and air conditioning supply"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Energy production and distribution"@en,
+    "Producción y distribución de energía"@es,
+    "production et distribution de l'énergie"@fr,
+    ""@ko,
+    "Produção e distribuição de energia"@pt;
+  skos:scopeNote "Includes the sectors of electricity, gas, steam and air conditioning"@en,
+    "Corresponde a los sectores de acondicionamiento de electricidad, gas, vapor y aire"@es,
+    "Comprend les secteurs du conditionnement d'électricité, de gaz, de vapeur et d'air"@fr,
+    ""@ko,
+    "Integra os setores de electricidade, gás, vapor e ar condicionado"@pt .
+
+<a05> a skos:Concept;
+  skos:altLabel "Water supply; sewerage, waste management and remediation activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Recycling, waste treatment, water cycle and ecological restoration"@en,
+    "Reciclage, tratamento de basura, ciclo de agua y retauración ecologica"@es,
+    "Recyclage, traitement des déchets, cycle de l'eau et la restauration écologique"@fr,
+    ""@ko,
+    "Reciclagem, tratamento de resíduos, ciclo da água e restauração ecológica"@pt;
+  skos:scopeNote "Includes the sectors of water supply sanitation activities, waste management and remediation"@en,
+    "Corresponde a los sectores de las actividades de saneamiento de agua de abastecimiento, la gestión de residuos y descontaminación"@es,
+    "Comprend les secteurs d'activités d'approvisionnement en eau assainissement, gestion des déchets et d'assainissement"@fr,
+    ""@ko,
+    "Integra os setores de abastecimento de água. atividades de saneamento, gestão de resíduos, e remediação"@pt .
+
+<a06> a skos:Concept;
+  skos:altLabel "Construction"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Construction, public works and refurbishing"@en,
+    "Construcción, trabajos publicos y restauración"@es,
+    "Construction, travaux publics et remise à neuf"@fr,
+    ""@ko,
+    "Construção, obras públicas e recondicionamento"@pt;
+  skos:scopeNote "Includes the sectors of construction"@en,
+    "Incluye los sectores de la construcción"@es,
+    "Comprend les secteurs de la construction"@fr,
+    ""@ko,
+    "Integra os setores de construção"@pt .
+
+<a07> a skos:Concept;
+  skos:altLabel "Wholesale and retail trade; repair of motor vehicles and motorcycles"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Trade and distribution"@en,
+    "Distribución y comercialización"@es,
+    "Commerce et distribution"@fr,
+    ""@ko,
+    "Comércio e distribuição"@pt;
+  skos:scopeNote "Includes the sectors of trade and retail trade, repair of motor vehicles and motorcycles"@en,
+    "Corresponde a los sectores del comercio y el comercio al por menor, reparación de vehículos de motor y motocicletas"@es,
+    "Comprend les secteurs du commerce et du commerce de détail, réparation de véhicules automobiles et de motocycles"@fr,
+    ""@ko,
+    "Integra os setores de comércio e retalho, reparação de veículos automóveis e motociclos"@pt .
+
+<a08> a skos:Concept;
+  skos:altLabel "Transportation and storage"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Transport, logistics and storage"@en,
+    "Transporte, logística y almacenamiento"@es,
+    "Transport, logistique et entreposage"@fr,
+    ""@ko,
+    "Transporte, logística e armazenagem"@pt;
+  skos:scopeNote "Includes the sectors of transport and storage"@en,
+    "Corresponde a los sectores de transporte y almacenamiento"@es,
+    "Comprend les secteurs du transport et de stockage"@fr,
+    ""@ko,
+    "Integra os setores de transporte e armazenamento"@pt .
+
+<a09> a skos:Concept;
+  skos:altLabel "Accommodation and food service activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Hospitality and food service activities"@en,
+    "Restauracion y hosteleria"@es,
+    "Restauration, hôtellerie, catering"@fr,
+    ""@ko,
+    "Atividades dos serviços de hotelaria e alimentação"@pt;
+  skos:scopeNote "Integrates the industry sectors of accommodation and food services"@en,
+    "Integra los sectores de la industria de servicios de alojamiento y comida"@es,
+    "Intègre les secteurs de l'industrie des services d'hébergement et de nourriture"@fr,
+    ""@ko,
+    "Integra os setores de atividades dos serviços de alojamento e restauração"@pt .
+
+<a10> a skos:Concept;
+  skos:altLabel "Information and communication"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Information, communication and technologies"@en,
+    "Información, comunicación y tecnologías"@es,
+    "Information, communication et technologies"@fr,
+    ""@ko,
+    "Informação, comunicação e tecnologias"@pt;
+  skos:scopeNote "Integrates information and communication sectors"@en,
+    "Integra los sectores de información y comunicación"@es,
+    "Intègre secteurs de l'information et de la communication"@fr,
+    ""@ko,
+    "Integra os setores de informação e comunicação"@pt .
+
+<a11> a skos:Concept;
+  skos:altLabel "Financial and insurance activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Financial, insurance and related activities"@en,
+    "Actividades financieras, de seguros y relacionados"@es,
+    "Finance, assurance et activités connexes"@fr,
+    ""@ko,
+    "Atividades de seguros, financeira e afins"@pt;
+  skos:scopeNote "Includes the sectors of financial and insurance activities"@en,
+    "Incluye los sectores de actividades financieras y de seguros"@es,
+    "Comprend les secteurs des activités financières et d'assurance"@fr,
+    ""@ko,
+    "Integra os setores de atividades financeiras e de seguros"@pt .
+
+<a12> a skos:Concept;
+  skos:altLabel "Real estate activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Habitat and housing"@en,
+    "Hábitat y la vivienda"@es,
+    "Habitat et logement"@fr,
+    ""@ko,
+    "Habitat e habitação"@pt;
+  skos:scopeNote "Includes the sectors of real estate activities"@en,
+    "Incluye los sectores de la actividad inmobiliaria"@es,
+    "Comprend les secteurs d'activités immobilières"@fr,
+    ""@ko,
+    "Integra os setores de atividades imobiliárias"@pt .
+
+<a13> a skos:Concept;
+  skos:altLabel "Professional, scientific and technical activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Professional, scientific and technical activities"@en,
+    "Actividades profesionales, científicas y técnicas"@es,
+    "Activités professionnelles, scientifiques et techniques"@fr,
+    ""@ko,
+    "Atividades profissionais, científicas e técnicas"@pt;
+  skos:scopeNote "Integrates the sectors of professional, scientific and technical"@en,
+    "Integra los sectores de servicios profesionales, científicos y técnicos"@es,
+    "Intègre les secteurs de services professionnels, scientifiques et techniques"@fr,
+    ""@ko,
+    "Integra os setores de atividades profissionais, científicas e técnicas"@pt .
+
+<a14> a skos:Concept;
+  skos:altLabel "Administrative and support service activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Administration and management, tourism, rentals"@en,
+    "Administración y gestión, el turismo y alquiler"@es,
+    "Administration et mangement, tourisme et location"@fr,
+    ""@ko,
+    "Administração e gestão, turismo, aluguel"@pt;
+  skos:scopeNote "Includes the sectors of administrative and support service activities"@en,
+    "Incluye los sectores de actividades administrativas y servicios auxiliares"@es,
+    "Comprend les secteurs d'activités de services administratifs et de soutien"@fr,
+    ""@ko,
+    "Integra os setores de administrativas e de apoio as atividades de serviços"@pt .
+
+<a15> a skos:Concept;
+  skos:altLabel "Public administration and defence; compulsory social security"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Public administration and social security"@en,
+    "Administración pública y seguridad social"@es,
+    "Administration publique et sécurité sociale"@fr,
+    ""@ko,
+    "Administração pública e da segurança social"@pt;
+  skos:scopeNote "Includes the sectors of public administration, defense and compulsory social security"@en,
+    "Incluye los sectores de la administración pública, defensa y seguridad social obligatoria"@es,
+    "Comprend les secteurs de l'administration publique, la défense et de sécurité sociale obligatoire"@fr,
+    ""@ko,
+    "Integra os setores de administração pública, defesa e segurança social obrigatória"@pt .
+
+<a16> a skos:Concept;
+  skos:altLabel "Education"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Education and training"@en,
+    "Educación y formación"@es,
+    "Éducation et formation"@fr,
+    ""@ko,
+    "Educação e formação"@pt;
+  skos:scopeNote "Integrates education sectors"@en,
+    "Integra los sectores de educación"@es,
+    "Intègre secteurs de l'éducation"@fr,
+    ""@ko,
+    "Integra os setores de educação"@pt .
+
+<a17> a skos:Concept;
+  skos:altLabel "Human health and social work activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Social services, health and employment"@en,
+    "Servicios sociales, salud y empleo"@es,
+    "Services sociaux et santé"@fr,
+    ""@ko,
+    "Serviços sociais, saúde e emprego"@pt;
+  skos:scopeNote "Includes the sectors of health and social"@en,
+    "Incluye los sectores de salud y sociales"@es,
+    "Comprend les secteurs de la santé et social"@fr,
+    ""@ko,
+    "Integra os setores de saúde humana e acção social"@pt .
+
+<a18> a skos:Concept;
+  skos:altLabel "Arts, entertainment and recreation"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Arts, culture, recreation and sports"@en,
+    "Arte, cultura, recreación y deporte"@es,
+    "Art, culture, loisirs et sports"@fr,
+    ""@ko,
+    "Artes, cultura, recreação e esportes"@pt;
+  skos:scopeNote "Includes the sectors of arts, entertainment and recreation"@en,
+    "Corresponde a los sectores de las artes, el entretenimiento y la recreación"@es,
+    "Comprend les secteurs des arts, spectacles et loisirs"@fr,
+    ""@ko,
+    "Integra os setores de artes, entretenimento e recreação"@pt .
+
+<a19> a skos:Concept;
+  skos:altLabel "Other service activities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Membership activities, repairing and wellness"@en,
+    "Actividades de organización social, mutualización y reparación"@es,
+    ""@fr,
+    ""@ko,
+    "Atividades associativas, reparação e bem-estar"@pt;
+  skos:scopeNote "Integrates the activities of other sectors of services"@en,
+    "Integra las actividades de otros sectores de servicios"@es,
+    "Intègre les activités d'autres secteurs de services"@fr,
+    ""@ko,
+    "Integra os setores de outras atividades de serviços"@pt .
+
+<a20> a skos:Concept;
+  skos:altLabel "Activities of households as employers; undifferentiated goods- and services-producing activities of households for own use"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "Household activities, self-production, domestic work"@en,
+    "Actividades domesticas e de auto-producción"@es,
+    ""@fr,
+    ""@ko,
+    "Atividades domésticas, auto-produção de trabalho, doméstico"@pt;
+  skos:scopeNote "Integra sectors of activities of households as employers"@en,
+    "Integra los sectores de las actividades de los hogares como empleadores"@es,
+    "Integra secteurs d'activités des ménages en tant qu'employeurs"@fr,
+    ""@ko,
+    "Integra os setores de atividades das famílias empregadoras"@pt .
+
+<a21> a skos:Concept;
+  skos:altLabel "Activities of extraterritorial organizations and bodies"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:inScheme <>;
+  skos:prefLabel "International diplomacy and cooperation"@en,
+    "Diplomacia internacional y cooperación"@es,
+    ""@fr,
+    ""@ko,
+    "Diplomacia e a cooperação internacional"@pt;
+  skos:scopeNote "Integra sectors of activities of organizations and bodies"@en,
+    "Integra los sectores de actividades de las organizaciones y organismos"@es,
+    "Integra secteurs d'activités des organisations et organismes"@fr,
+    ""@ko,
+    "Integra os setores de atividades de organizações e entidades extraterritoriais"@pt .

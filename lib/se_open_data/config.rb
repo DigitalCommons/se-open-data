@@ -37,6 +37,8 @@ module SeOpenData
       "DEPLOYMENT_WEB_GROUP" => "www-data",
       "VIRTUOSO_USER" => "root",
       "VIRTUOSO_GROUP" => "root",
+      "VOCAB_INDEX_FILE" => "vocabs.json",
+      "VOCAB_LANGS" => "en",
       "USING_ICA_ACTIVITIES" => false,
     }
 
@@ -151,6 +153,14 @@ module SeOpenData
         @map[key] = @map.key?(key) && @map[key].to_s.downcase == "true"
       end
 
+      @map['VOCAB_LANGS'] = @map['VOCAB_LANGS'].split(/ +/).collect do |val|
+        unless val =~ /^[a-z]{2}/
+          abort "invalid language code '#{val}': "+
+                "VOCAB_LANGS must be > 0 space-delimited 2 character language codes"
+        end
+        val.downcase.to_sym
+      end
+      
       # Define an accessor method for all the keys on this instance -
       # but only if they don't exist already
       @map.each_key do |key|

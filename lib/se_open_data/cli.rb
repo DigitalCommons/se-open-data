@@ -343,6 +343,7 @@ module SeOpenData
       require "se_open_data/csv/standard"
       require "se_open_data/initiative/rdf"
       require "se_open_data/initiative/collection"
+      require 'se_open_data/vocab_to_index'
       require "json"
       require "etc"
       require "socket"
@@ -374,6 +375,34 @@ module SeOpenData
 
       # Enumerate the CSS files there, relative to GEN_DOC_DIR
       css_files = Dir.glob(css_rel_dir + "**/*.css", base: config.GEN_DOC_DIR)
+
+      # Generate a vocab index
+      begin
+        vocab_uris = config.map.collect do |key, value|
+          if key.start_with? 'VOCAB_URI_'
+            prefix = key[10..].downcase
+            [value, prefix]
+          end
+        end.compact.to_h
+        
+        graph = ::RDF::Graph.new
+        vocab_uris.each do |uri, prefix|
+          uri = uri.sub(%r{/+$}, '') # remove the trailing slash, or we don't get the .ttl file
+          Log.debug "loading vocab #{prefix}: from #{uri}"
+          graph << ::RDF::Graph.load(uri, headers: {'Accept' => 'text/turtle'})
+        end
+        
+        vocab_indexer = SeOpenData::VocabToIndex.new(graph.to_enum)
+        vocab_index = vocab_indexer.aggregate({
+                                                languages: config.VOCAB_LANGS,
+                                                vocabularies: [
+                                                  { uris: vocab_uris }
+                                                ],
+                                              })
+        vocab_index_file = File.join(config.GEN_DOC_DIR, config.VOCAB_INDEX_FILE)
+        Log.debug "writing vocab index flie #{vocab_index_file}"
+        IO.write vocab_index_file, JSON.generate(vocab_index)
+      end
 
       #all
       IO.write config.SPARQL_ENDPOINT_FILE, config.SPARQL_ENDPOINT + "\n"
