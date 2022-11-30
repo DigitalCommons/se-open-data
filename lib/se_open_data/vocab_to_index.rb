@@ -30,11 +30,11 @@ module SeOpenData
     # Get solution collection of of the concept schemes which exist in
     # the graph matching the given list of concept scheme uris
     def query_schemes(schemes)
-      query = RDF::Query.new(
+      query = ::RDF::Query.new(
         **{
           :scheme => {
-            RDF.type => RDF::Vocab::SKOS.ConceptScheme,
-            RDF::Vocab::DC11.title => :title,
+            ::RDF.type => ::RDF::Vocab::SKOS.ConceptScheme,
+            ::RDF::Vocab::DC11.title => :title,
           },
         }
       )
@@ -48,12 +48,12 @@ module SeOpenData
     # Get a solution collection indicating the concepts in the graph
     # from the given concept scheme.
     def query_concepts(scheme)
-      query = RDF::Query.new(
+      query = ::RDF::Query.new(
         **{
           :concept => {
-            RDF.type => RDF::Vocab::SKOS.Concept,
-            RDF::Vocab::SKOS.inScheme => scheme,
-            RDF::Vocab::SKOS.prefLabel => :label,
+            ::RDF.type => ::RDF::Vocab::SKOS.Concept,
+            ::RDF::Vocab::SKOS.inScheme => scheme,
+            ::RDF::Vocab::SKOS.prefLabel => :label,
           },
         }
       )
