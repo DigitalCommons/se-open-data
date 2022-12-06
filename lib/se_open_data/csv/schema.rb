@@ -452,6 +452,8 @@ module SeOpenData
                 # this may throw
                 csv_out << @to_schema.row(new_id_hash)
               end
+            rescue => e
+              raise RuntimeError, "#{e.message}\nwhilst parsing row data:\n#{'%.160s' % row.to_csv}"
             end
           end
         rescue => e
