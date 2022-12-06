@@ -385,7 +385,6 @@ module SeOpenData
         def each_row(input, output)
           index = 0
           stream(input, output) do |inputs, outputs|
-            index += 1
             csv_in = ::CSV.new(inputs, **@input_csv_opts)
             csv_out = ::CSV.new(outputs, **@output_csv_opts)
             
@@ -402,6 +401,8 @@ module SeOpenData
             csv_out << @to_schema.field_headers
             
             csv_in.each do |row|
+              index += 1
+              
               # This may throw if validation fails
               id_hash = @from_schema.id_hash(row, field_map)
 
