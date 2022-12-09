@@ -10,15 +10,136 @@ Minitest::Test::make_my_diffs_pretty!
 DataDir = __dir__+"/data"
 
 describe SeOpenData::VocabToIndex do
-
+  
   describe "using activities.ttl" do
     v2j = nil
     RDF::Reader.open(DataDir + '/activities.ttl') do |reader|
       v2j = SeOpenData::VocabToIndex.new(reader.to_enum)
     end
-    
 
-    it "at least this config should generate the expcted vocab datastructure" do
+
+    it "an empty config should result in an empty index" do
+      skip
+      result = v2j.aggregate({
+                               languages: [],
+                               vocabularies: [],
+                             })
+      #puts JSON.pretty_generate(result)
+      #puts result.inspect
+      value(result).must_equal(
+        {
+          prefixes: {},
+          meta: {
+            vocab_srcs: [],
+            languages: [],
+            queries: [],
+          },
+          vocabs: {},
+        },
+      )
+    end
+
+
+    it "a single english vocab request should result in an english index" do
+      skip
+      result = v2j.aggregate({
+                               languages: [:en],
+                               vocabularies: [
+                                 { uris: {
+                                     "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities/" => "aci",
+                                   }
+                                 }
+                               ],
+                             })
+      #puts JSON.pretty_generate(result)
+      #puts result.inspect
+      value(result).must_equal(
+        {
+          prefixes: {
+            "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities/" => :aci,
+          },
+          meta: {
+            vocab_srcs: [
+              { uris: {
+                  "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities/" => "aci",
+                }
+              }
+            ],
+            languages: [:en],
+            queries: [],
+          },
+          vocabs: {
+            "aci:": {
+                      :EN=>{
+                        :terms=>{
+                          "aci:a01": "Agriculture and environment",
+                                 "aci:a02": "Mining and quarrying",
+                                 "aci:a03": "Craftmanship and manufacturing",
+                                 "aci:a04": "Energy production and distribution",
+                                 "aci:a05": "Recycling, waste treatment, water cycle and ecological restoration",
+                                 "aci:a06": "Construction, public works and refurbishing",
+                                 "aci:a07": "Trade and distribution",
+                                 "aci:a08": "Transport, logistics and storage",
+                                 "aci:a09": "Hospitality and food service activities",
+                                 "aci:a10": "Information, communication and technologies",
+                                 "aci:a11": "Financial, insurance and related activities",
+                                 "aci:a12": "Habitat and housing",
+                                 "aci:a13": "Professional, scientific and technical activities",
+                                 "aci:a14": "Administration and management, tourism, rentals",
+                                 "aci:a15": "Public administration and social security",
+                                 "aci:a16": "Education and training",
+                                 "aci:a17": "Social services, health and employment",
+                                 "aci:a18": "Arts, culture, recreation and sports",
+                                 "aci:a19": "Membership activities, repairing and wellness",
+                                 "aci:a20": "Household activities, self-production, domestic work",
+                                 "aci:a21": "International diplomacy and cooperation"
+                        },
+                        :title=>"Activities"
+                      },
+                    },
+          },
+        }
+      )
+    end
+
+
+    it "conflicting uris in vocab request fail, catching all the right cases" do
+      err = value(
+        proc {
+          result = v2j.aggregate(
+            {
+              languages: [],
+              vocabularies: [
+                { uris: {
+                    "https://dev.lod.coop/essglobal/2.1/standard/activities/" => "ac",
+                    "https://dev.lod.coop/essglobal/2.1/standard/organisations/" => "os",
+                    # dupe prefix in same vocab - bad
+                    "https://dev.lod.coop/essglobal/2.1/standard/organisation/" => "os",
+                    "https://dev.lod.coop/essglobal/2.1/standard/membership/" => "mm",
+                    
+                  } },
+                { uris: {
+                    # dupe uri in separate vocab - bad
+                    "https://dev.lod.coop/essglobal/2.1/standard/organisations/" => "orgs",
+                    # dupe prefix in separate vocab -  bad
+                    "https://dev.lod.coop/essglobal/2.1/standard/accounting/" => "ac",
+                    # dupe both prefix and uri - ok
+                    "https://dev.lod.coop/essglobal/2.1/standard/membership/" => "mm",
+                  } },
+              ],
+            }
+          )
+        }
+      ).must_raise(ArgumentError)
+
+      value(err.message).must_match(
+        %r{.*: os, ac, https://dev.lod.coop/essglobal/2.1/standard/organisations/}
+      )
+    end
+
+
+    it "this fairly typical config should generate the expcted vocab datastructure" do
+      skip
       result = v2j.aggregate({
                                languages: [:en, :fr],
                                vocabularies: [
