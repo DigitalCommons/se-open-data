@@ -307,7 +307,8 @@ module SeOpenData
           # Query all concepts for this scheme, and re-use it for each language.
           concepts =  query_concepts(scheme) 
           abbrev_scheme = scheme.pname(prefixes: prefix2uri).to_sym #.sub(/:$/, '') # remove trailing colon
-
+          vocab = vocabs[abbrev_scheme] ||= {}
+          
           # Iterate over each language for this scheme
           langs.each do |lang, title|
             lang_s = lang.to_s.upcase.to_sym
@@ -317,15 +318,15 @@ module SeOpenData
               soln.label.language == lang
             end
 
+            # Ensure terms field is an object, even if empty
+            localised_concepts = vocab[lang_s] ||= {}
+            localised_concepts[:title] ||= title.to_s
+            localised_terms = localised_concepts[:terms] ||= {}
+            
             lang_concepts.each do |soln| # incorporate this concept label
               label = soln.label
               #warn "#{title}@#{lang} -> #{soln.concept.value} #{label}" # DEBUG
               
-              # Ensure terms field is an object, even if empty
-              vocabs[abbrev_scheme] ||= {}
-              localised_concepts = vocabs[abbrev_scheme][lang_s] ||= {}
-              localised_concepts[:title] ||= title.to_s
-              localised_terms = localised_concepts[:terms] ||= {}
               
               concept = soln.concept
               # FIXME check for overwriting data
