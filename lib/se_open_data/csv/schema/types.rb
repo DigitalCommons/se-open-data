@@ -30,8 +30,8 @@ module SeOpenData
           # path, optional trailing slash.  If full_url is truthy,
           # match all of the URL to the end (defaut is false, for
           # backward-compatibility, but recommended value is true)
-          pattern = full_url ? %r{^([\w_-]+\.)+([\w_-]+)(:\d+)?(/\S+)*/?$}
-                    : %r{^([\w_-]+\.)+([\w_-]+)(:\d+)?(/\S+)*/?}
+          pattern = full_url ? %r{^([\w-]+\.)+([\w-]+)(:\d+)?(/\S+)*/?$}
+                    : %r{^([\w-]+\.)+([\w-]+)(:\d+)?(/\S+)*/?}
           
           rest.match(pattern) do |m|
             nrest = m[0].gsub(%r{/+}, '/')
@@ -62,10 +62,10 @@ module SeOpenData
             
             # Note, we don't match *just* the facebook url with no path. i.e.
             # Just 'https://www.facebook.com/' alone is not a valid facebook URL
-            url.downcase.match(%r{^https?://([\w_-]+\.)?facebook.com/(.+)}) do |m|
+            url.downcase.match(%r{^https?://([\w-]+\.)?facebook.com/(.+)}) do |m|
               return base_url+m[2]
             end
-            url.downcase.match(%r{^https?://([\w_-]+\.)?fb.me/(.+)}) do |m|
+            url.downcase.match(%r{^https?://([\w-]+\.)?fb.me/(.+)}) do |m|
               return base_url+m[2]
             end
             
@@ -94,7 +94,7 @@ module SeOpenData
             
             # Note, we don't match *just* the twitter url with no path. i.e.
             # Just 'https://www.twitter.com/' alone is not a valid twitter URL
-            url.downcase.match(%r{^https?://([\w_-]+\.)?twitter.com/(.+)}) do |m|
+            url.downcase.match(%r{^https?://([\w-]+\.)?twitter.com/(.+)}) do |m|
               return base_url+m[2]
             end
             
