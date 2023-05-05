@@ -33,7 +33,6 @@ describe SeOpenData::VocabToIndex do
     v2j = read_ttl('activities')
 
     it "an empty config should result in an empty index" do
-      skip
       result = v2j.aggregate({
                                languages: [],
                                vocabularies: [],
@@ -45,7 +44,6 @@ describe SeOpenData::VocabToIndex do
 
 
     it "a single english vocab request should result in an english index" do
-      skip
       result = v2j.aggregate({
                                languages: [:en],
                                vocabularies: [
@@ -108,7 +106,6 @@ describe SeOpenData::VocabToIndex do
 
 
     it "conflicting uris in vocab request fail, catching all the right cases" do
-      skip
       err = value(
         proc {
           v2j.aggregate(
@@ -144,7 +141,6 @@ describe SeOpenData::VocabToIndex do
 
 
     it "this fairly typical config should generate the expcted vocab datastructure" do
-      skip
       result = v2j.aggregate({
                                languages: [:en, :fr],
                                vocabularies: [
