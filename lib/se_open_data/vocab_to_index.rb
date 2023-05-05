@@ -321,25 +321,33 @@ module SeOpenData
             # Ensure terms field is an object, even if empty
             localised_concepts = vocab[lang_s] ||= {}
             localised_concepts[:title] ||= title.to_s
-            localised_terms = localised_concepts[:terms] ||= {}
-            
-            lang_concepts.each do |soln| # incorporate this concept label
-              label = soln.label
-              #warn "#{title}@#{lang} -> #{soln.concept.value} #{label}" # DEBUG
-              
-              
-              concept = soln.concept
-              # FIXME check for overwriting data
-              if concept # concept info
-                abbrev_concept = concept.pname(prefixes: prefix2uri).to_sym
-                localised_terms[abbrev_concept] = label.to_s
-              end
-            end
+            localised_concepts[:terms] = index_terms(lang_concepts, prefix2uri)
           end
         end
       end
       
       return result
-    end    
+    end
+
+    # Helper to index a set of concepts as a hash of abbreviated URIs to concept values
+    # (Any later duplicate keys will overwrite earlier ones)
+    # Languages are assumed to all be the same, so ignored.
+    def index_terms(lang_concepts, prefix2uri)
+      localised_terms = {}
+      
+      lang_concepts.each do |soln| # incorporate this concept label
+        label = soln.label
+        #warn "#{title}@#{lang} -> #{soln.concept.value} #{label}" # DEBUG
+        
+        concept = soln.concept
+        # FIXME check for overwriting data
+        if concept # concept info
+          abbrev_concept = concept.pname(prefixes: prefix2uri).to_sym
+          localised_terms[abbrev_concept] = label.to_s
+        end
+      end
+      
+      localised_terms
+    end      
   end
 end
