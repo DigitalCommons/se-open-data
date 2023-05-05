@@ -310,7 +310,7 @@ module SeOpenData
 
           # Iterate over each language for this scheme
           langs.each do |lang, title|
-            lang_s = lang.upcase.to_sym
+            lang_s = lang.to_s.upcase.to_sym
 
             # Filter out all solutions not for this language
             lang_concepts = concepts.each.select do |soln|
