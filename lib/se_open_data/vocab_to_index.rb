@@ -311,17 +311,18 @@ module SeOpenData
           
           # Iterate over each language for this scheme
           langs.each do |lang, title|
-            lang_s = lang.to_s.upcase.to_sym
+            norm_lang = lang.to_s.upcase
 
             # Filter out all solutions not for this language
             lang_concepts = concepts.each.select do |soln|
-              soln.label.language == lang
+              soln.label.language.to_s.upcase == norm_lang
             end
 
-            # Ensure terms field is an object, even if empty
-            localised_concepts = vocab[lang_s] ||= {}
-            localised_concepts[:title] ||= title.to_s
-            localised_concepts[:terms] = index_terms(lang_concepts, prefix2uri)
+            # Create vocab from this list of concepts
+            vocab[norm_lang.to_sym] = {
+              title: title.to_s,
+              terms: index_terms(lang_concepts, prefix2uri),
+            }
           end
         end
       end
