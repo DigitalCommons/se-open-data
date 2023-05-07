@@ -45,7 +45,7 @@ describe SeOpenData::VocabToIndex do
 
     it "a single english vocab request should result in an english index" do
       result = v2j.aggregate({
-                               languages: [:en],
+                               languages: [:EN],
                                vocabularies: [
                                  { uris: {
                                      "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities/" => "aci",
@@ -67,7 +67,7 @@ describe SeOpenData::VocabToIndex do
                 }
               }
             ],
-            languages: [:en],
+            languages: [:EN],
             queries: [],
           },
           vocabs: {
@@ -142,7 +142,7 @@ describe SeOpenData::VocabToIndex do
 
     it "this fairly typical config should generate the expcted vocab datastructure" do
       result = v2j.aggregate({
-                               languages: [:en, :fr],
+                               languages: [:EN, :FR],
                                vocabularies: [
                                  { uris: {
                                      "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities/" => "aci",
@@ -168,7 +168,7 @@ describe SeOpenData::VocabToIndex do
                 }
               }
             ],
-            :languages=>[:en, :fr], # Note, lowercase, because from input config.
+            :languages=>[:EN, :FR], # Note, lowercase, because from input config. FIXME
             :queries=>[]
           },
           :vocabs=>{
@@ -229,4 +229,230 @@ describe SeOpenData::VocabToIndex do
       )
     end
   end
+
+  describe "using activities-modified.ttl" do
+
+    # Activites modified has blank language values
+    
+    v2j = read_ttl('activities-modified');
+
+    it "an empty config should result in an empty index" do
+      result = v2j.aggregate({
+                               languages: [],
+                               vocabularies: [],
+                             })
+      #puts JSON.pretty_generate(result)
+      #puts result.inspect
+      value(result).must_equal(empty_vocab_index)
+    end
+
+
+    it "a single english vocab request should result in an english index" do
+      result = v2j.aggregate({
+                               languages: [:EN],
+                               vocabularies: [
+                                 { uris: {
+                                     "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities-modified/" => "am",
+                                   }
+                                 }
+                               ],
+                             })
+      #puts JSON.pretty_generate(result)
+      #puts result.inspect
+      value(result).must_equal(
+        {
+          prefixes: {
+            "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities-modified/" => :am,
+          },
+          meta: {
+            vocab_srcs: [
+              { uris: {
+                  "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities-modified/" => "am",
+                }
+              }
+            ],
+            languages: [:EN],
+            queries: [],
+          },
+          vocabs: {
+            "am:": {
+                     :EN=>{
+                       :title=>"Activities (Modified)",
+                       :terms=> {
+                                 "am:AM10": "Arts, Media, Culture & Leisure",
+                                 "am:AM20": "Campaigning, Activism & Advocacy",
+                                 "am:AM30": "Community & Collective Spaces",
+                                 "am:AM40": "Education",
+                                 "am:AM50": "Energy",
+                                 "am:AM60": "Food",
+                                 "am:AM70": "Goods & Services",
+                                 "am:AM80": "Health, Social Care & Wellbeing",
+                                 "am:AM90": "Housing",
+                                 "am:AM100": "Money & Finance",
+                                 "am:AM110": "Nature, Conservation & Environment",
+                                 "am:AM120": "Reduce, Reuse, Repair & Recycle",
+                                 "am:AM130": "Agriculture",
+                                 "am:AM140": "Industry",
+                                 "am:AM150": "Utilities",
+                                 "am:AM160": "Transport",
+                       },
+                       
+                     },
+                   },
+          }
+        }
+      )
+    end
+    
+    it "an empty vocab request should result in all indexes" do
+      # And complete indexes, even if there are missing items in some cases.
+      # Fill in the gaps with ""
+      
+      result = v2j.aggregate({
+                               vocabularies: [
+                                 { uris: {
+                                     "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities-modified/" => "am",
+                                   }
+                                 }
+                               ],
+                             })
+      #puts JSON.pretty_generate(result)
+      # pp result
+      value(result).must_equal(
+        {
+          prefixes: {
+            "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities-modified/" => :am,
+          },
+          meta: {
+            vocab_srcs: [
+              { uris: {
+                  "https:\/\/dev.lod.coop/essglobal/2.1/standard/activities-modified/" => "am",
+                }
+              }
+            ],
+            languages: [:EN, :ES, :FR, :KO, :PT],
+            queries: [],
+          },
+          vocabs: {
+              "am:": {
+                       EN: {
+                         title: "Activities (Modified)",
+                         terms:
+                           {
+                             "am:AM10": "Arts, Media, Culture & Leisure",
+                            "am:AM100": "Money & Finance",
+                            "am:AM110": "Nature, Conservation & Environment",
+                            "am:AM120": "Reduce, Reuse, Repair & Recycle",
+                            "am:AM130": "Agriculture",
+                            "am:AM140": "Industry",
+                            "am:AM150": "Utilities",
+                            "am:AM160": "Transport",
+                            "am:AM20": "Campaigning, Activism & Advocacy",
+                            "am:AM30": "Community & Collective Spaces",
+                            "am:AM40": "Education",
+                            "am:AM50": "Energy",
+                            "am:AM60": "Food",
+                            "am:AM70": "Goods & Services",
+                            "am:AM80": "Health, Social Care & Wellbeing",
+                            "am:AM90": "Housing"}},
+                       ES: 
+                         {
+                           title: "Activities (Modified)",
+                           terms: 
+                             {
+                               "am:AM10": "",
+                              "am:AM100": "",
+                              "am:AM110": "",
+                              "am:AM120": "",
+                              "am:AM130": "",
+                              "am:AM140": "",
+                              "am:AM150": "",
+                              "am:AM160": "",
+                              "am:AM20": "",
+                              "am:AM30": "",
+                              "am:AM40": "",
+                              "am:AM50": "",
+                              "am:AM60": "",
+                              "am:AM70": "",
+                              "am:AM80": "",
+                              "am:AM90": ""
+                             }
+                         },
+                       FR: 
+                         {
+                           title: "Activities (Modified)",
+                           terms: 
+                             {
+                               "am:AM10": "",
+                              "am:AM100": "",
+                              "am:AM110": "",
+                              "am:AM120": "",
+                              "am:AM130": "",
+                              "am:AM140": "",
+                              "am:AM150": "",
+                              "am:AM160": "",
+                              "am:AM20": "",
+                              "am:AM30": "",
+                              "am:AM40": "",
+                              "am:AM50": "",
+                              "am:AM60": "",
+                              "am:AM70": "",
+                              "am:AM80": "",
+                              "am:AM90": ""
+                             }
+                         },
+                       KO: 
+                         {
+                           title: "Activities (Modified)",
+                           terms: 
+                             {
+                               "am:AM10": "",
+                              "am:AM100": "",
+                              "am:AM110": "",
+                              "am:AM120": "",
+                              "am:AM130": "",
+                              "am:AM140": "",
+                              "am:AM150": "",
+                              "am:AM160": "",
+                              "am:AM20": "",
+                              "am:AM30": "",
+                              "am:AM40": "",
+                              "am:AM50": "",
+                              "am:AM60": "",
+                              "am:AM70": "",
+                              "am:AM80": "",
+                              "am:AM90": ""
+                             }
+                         },
+                       PT: 
+                         {
+                           title: "Activities (Modified)",
+                           terms: 
+                             {
+                               "am:AM10": "",
+                              "am:AM100": "",
+                              "am:AM110": "",
+                              "am:AM120": "",
+                              "am:AM130": "",
+                              "am:AM140": "",
+                              "am:AM150": "",
+                              "am:AM160": "",
+                              "am:AM20": "",
+                              "am:AM30": "",
+                              "am:AM40": "",
+                              "am:AM50": "",
+                              "am:AM60": "",
+                              "am:AM70": "",
+                              "am:AM80": "",
+                              "am:AM90": ""
+                             }
+                         }
+                     }
+          }
+        }
+      )
+    end
+  end
+
 end
+# FIXME test case of ttl lang tags

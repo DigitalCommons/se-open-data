@@ -1,0 +1,170 @@
+@base <https://dev.lod.coop/essglobal/2.1/standard/activities-modified/> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix essglobal: <https://dev.lod.coop/essglobal/2.1/standard/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<> a skos:ConceptScheme;
+  dc:description "A modified activity vocabulary for SSE";
+  dc:language "en-en";
+  dc:modified "2022-01-21"^^xsd:date;
+  dc:publisher <https://solidarityeconomy.coop/>;
+  dc:relation <http://www.ripess.org/>;
+  dc:title "Activities (Modified)";
+  dcterms:created "2019-05-20"^^xsd:date;
+  dcterms:publisher "ESSGLOBAL" .
+
+<AM10> a skos:Concept;
+  skos:altLabel "A";
+  skos:inScheme <>;
+  skos:prefLabel "Arts, Media, Culture & Leisure"@en;
+  skos:scopeNote "" .
+
+<AM100> a skos:Concept;
+  skos:altLabel "J";
+  skos:inScheme <>;
+  skos:prefLabel "Money & Finance"@en,
+    "";
+  skos:scopeNote "" .
+
+<AM110> a skos:Concept;
+  skos:altLabel "K";
+  skos:inScheme <>;
+  skos:prefLabel "Nature, Conservation & Environment"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM120> a skos:Concept;
+  skos:altLabel "L";
+  skos:inScheme <>;
+  skos:prefLabel "Reduce, Reuse, Repair & Recycle"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM130> a skos:Concept;
+  skos:altLabel "M";
+  skos:inScheme <>;
+  skos:prefLabel "Agriculture"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM140> a skos:Concept;
+  skos:altLabel "N";
+  skos:inScheme <>;
+  skos:prefLabel "Industry"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM150> a skos:Concept;
+  skos:altLabel "O";
+  skos:inScheme <>;
+  skos:prefLabel "Utilities"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM160> a skos:Concept;
+  skos:altLabel "P";
+  skos:inScheme <>;
+  skos:prefLabel "Transport"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM20> a skos:Concept;
+  skos:altLabel "B";
+  skos:inScheme <>;
+  skos:prefLabel "Campaigning, Activism & Advocacy"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM30> a skos:Concept;
+  skos:altLabel "C";
+  skos:inScheme <>;
+  skos:prefLabel "Community & Collective Spaces"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM40> a skos:Concept;
+  skos:altLabel "D";
+  skos:inScheme <>;
+  skos:prefLabel "Education"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM50> a skos:Concept;
+  skos:altLabel "E";
+  skos:inScheme <>;
+  skos:prefLabel "Energy"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM60> a skos:Concept;
+  skos:altLabel "F";
+  skos:inScheme <>;
+  skos:prefLabel "Food"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM70> a skos:Concept;
+  skos:altLabel "G";
+  skos:inScheme <>;
+  skos:prefLabel "Goods & Services"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM80> a skos:Concept;
+  skos:altLabel "H";
+  skos:inScheme <>;
+  skos:prefLabel "Health, Social Care & Wellbeing"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
+
+<AM90> a skos:Concept;
+  skos:altLabel "I";
+  skos:inScheme <>;
+  skos:prefLabel "Housing"@en,
+    ""@es,
+    ""@fr,
+    ""@ko,
+    ""@pt;
+  skos:scopeNote "" .
