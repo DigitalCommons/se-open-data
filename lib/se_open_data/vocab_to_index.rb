@@ -28,8 +28,9 @@ module SeOpenData
     end
 
     # Get solution collection of of the concept schemes which exist in
-    # the graph matching the given list of concept scheme uris
-    def query_schemes(schemes)
+    # the graph matching the given list of concept scheme uris.
+    # If no schemes given, query them all.
+    def query_schemes(schemes = nil)
       query = ::RDF::Query.new(
         **{
           :scheme => {
@@ -38,28 +39,55 @@ module SeOpenData
           },
         }
       )
-
+      
       # Filter out only those listed in schemes
-      query.execute(@graph).filter do |soln|
-        schemes.has_key?(soln.scheme.value)
+      concepts = query.execute(@graph)
+      if schemes == nil
+        concepts
+      else
+        concepts.filter do |soln|
+          schemes.has_key?(soln.scheme.value)
+        end
       end
     end
 
     # Get a solution collection indicating the concepts in the graph
-    # from the given concept scheme.
-    def query_concepts(scheme)
-      query = ::RDF::Query.new(
-        **{
-          :concept => {
-            ::RDF.type => ::RDF::Vocab::SKOS.Concept,
-            ::RDF::Vocab::SKOS.inScheme => scheme,
-            ::RDF::Vocab::SKOS.prefLabel => :label,
-          },
-        }
-      )
+    # from the given concept scheme. If the scheme is null, get them all.
+    def query_concepts(scheme = nil)
+      query = if scheme == nil
+                ::RDF::Query.new(
+                  **{
+                    :concept => {
+                      ::RDF.type => ::RDF::Vocab::SKOS.Concept,
+                      ::RDF::Vocab::SKOS.prefLabel => :label,
+                    },
+                  }
+                )
+              else
+                ::RDF::Query.new(
+                  **{
+                    :concept => {
+                      ::RDF.type => ::RDF::Vocab::SKOS.Concept,
+                      ::RDF::Vocab::SKOS.inScheme => scheme,
+                      ::RDF::Vocab::SKOS.prefLabel => :label,
+                    },
+                  }
+                )
+              end
       query.execute(@graph)
     end
 
+    def all_languages()
+      languages = {}
+      query_schemes.each do |scheme|
+        languages[scheme.title.language] = true if scheme.title.language
+      end
+      query_concepts.each do |concept|
+        languages[concept.label.language] = true if concept.label.language
+      end
+      languages.keys
+    end
+    
     # Transform the data according to the config parameter.
     #
     # The form of `config` is a hash object including two (symbolic)
@@ -233,7 +261,7 @@ module SeOpenData
     # data.
     def aggregate(config)
       vocab_srcs = config[:vocabularies] || {}
-      languages = config[:languages] || []
+      languages = (config[:languages] || all_languages).map(&:upcase)
 
       # A URI -> prefix index
       uri2prefix = {}
@@ -288,40 +316,48 @@ module SeOpenData
         # abbreviated scheme URIs -> languages -> titles.  We do this
         # here so we can iterate over schemes, then languages, in the
         # next loop.
+        # Note: some schemes may have no title, and won't be captured here.
         schemes = query_schemes(vocab_src_uris).reduce({}) do |schemes, soln|          
           uri = soln.scheme
           title = soln.title
 
-          # Omit languages not in the configured list
-          if languages.empty? || languages.include?(title.language)
+          # Omit languages not in the configured list when indexing.
+          # Special case: a non-localised title matches all languages.
+          # This is so we do not exclude cases which are non-localised.
+          norm_lang = title&.language.to_s.upcase.to_sym
+          if languages.empty? || title&.language == nil || languages.include?(norm_lang)
             schemes[uri] ||= {}
-            schemes[uri][title.language] = title.value
+            schemes[uri][norm_lang] = title&.value.to_s
           end
           
           schemes
         end
 
-        # Now iterate the schemes, languages, and build the result datastructre
-        schemes.each do |scheme, langs|
-          # There will be one iteration here for each scheme.
-          # Query all concepts for this scheme, and re-use it for each language.
-          concepts =  query_concepts(scheme) 
-          abbrev_scheme = scheme.pname(prefixes: prefix2uri).to_sym #.sub(/:$/, '') # remove trailing colon
-          vocab = vocabs[abbrev_scheme] ||= {}
-          
-          # Iterate over each language for this scheme
-          langs.each do |lang, title|
-            norm_lang = lang.to_s.upcase
+        # Now iterate the target languages, and build the result datastructre
+        languages.each do |lang|
 
-            # Filter out all solutions not for this language
-            lang_concepts = concepts.each.select do |soln|
-              soln.label.language.to_s.upcase == norm_lang
-            end
-
-            # Create vocab from this list of concepts
+          schemes.each do |scheme, scheme_langs|
+            # There will be one iteration here for each scheme.
+            # Query all concepts for this scheme, and re-use it for each language.
+            concepts =  query_concepts(scheme) 
+            abbrev_scheme = scheme.pname(prefixes: prefix2uri).to_sym #.sub(/:$/, '') # remove trailing colon
+            vocab = vocabs[abbrev_scheme] ||= {}
+            
+            # Collect the languageless title and concepts as fallbacks
+            nolang_title = scheme_langs[:''].to_s            
+            nolang_terms = index_terms(concepts, nil, prefix2uri)
+            
+            # Collect the target language title and concepts
+            lang_title = scheme_langs[lang].to_s
+            norm_lang = lang.to_s.upcase.to_sym
+            
+            # Create vocab from this list of concepts, merged with the defaults
+            # with no language.
             vocab[norm_lang.to_sym] = {
-              title: title.to_s,
-              terms: index_terms(lang_concepts, prefix2uri),
+              title: (lang_title.empty? ? nolang_title : lang_title),
+              terms: nolang_terms.merge(
+                index_terms(concepts, norm_lang, prefix2uri)
+              ),
             }
           end
         end
@@ -333,21 +369,28 @@ module SeOpenData
     # Helper to index a set of concepts as a hash of abbreviated URIs to concept values
     # (Any later duplicate keys will overwrite earlier ones)
     # Languages are assumed to all be the same, so ignored.
-    def index_terms(lang_concepts, prefix2uri)
+    def index_terms(concepts, lang, prefix2uri)
+      lang = lang.to_s.upcase
       localised_terms = {}
-      
-      lang_concepts.each do |soln| # incorporate this concept label
-        label = soln.label
-        #warn "#{title}@#{lang} -> #{soln.concept.value} #{label}" # DEBUG
+
+      concepts.each do |soln| # incorporate this concept label       
+        # FIXME warn about potentially overwriting data
+        next unless soln.concept
         
-        concept = soln.concept
-        # FIXME check for overwriting data
-        if concept # concept info
-          abbrev_concept = concept.pname(prefixes: prefix2uri).to_sym
+        label = if soln.label.language.to_s.upcase == lang
+                  soln.label
+                else
+                  nil
+                end
+          
+        abbrev_concept = soln.concept.pname(prefixes: prefix2uri).to_sym
+
+        # Sets the concept to '' if nothing better
+        if localised_terms[abbrev_concept] == nil || localised_terms[abbrev_concept] == ''
           localised_terms[abbrev_concept] = label.to_s
         end
       end
-      
+
       localised_terms
     end      
   end
