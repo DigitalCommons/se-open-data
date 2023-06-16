@@ -261,8 +261,14 @@ module SeOpenData
     # data.
     def aggregate(config)
       vocab_srcs = config[:vocabularies] || {}
-      languages = (config[:languages] || all_languages).map(&:upcase)
-
+      languages = config[:languages] || []
+      
+      if languages.length == 0
+        languages = all_languages
+      end
+        
+      languages = languages.map(&:upcase).map(&:to_sym)
+      
       # A URI -> prefix index
       uri2prefix = {}
 
