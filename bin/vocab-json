@@ -1,0 +1,154 @@
+#!/usr/bin/env ruby
+
+# This tool is for creating vocab.json files.
+require 'getoptlong'
+require 'uri'
+require 'json'
+require 'linkeddata'
+require_relative '../lib/load_path'
+require 'se_open_data/vocab_to_index'
+require "se_open_data/utils/log_factory"
+
+class VocabJson
+  # Create a log instance
+  Log = SeOpenData::Utils::LogFactory.default
+  
+  def usage(cmd, error=nil)
+    error = if error
+              "#{error}\n\n"
+            else
+              ''
+            end
+    
+    return <<USAGE
+#{error}usage:
+   #{cmd} -l L1[,L2 [...]] ABBREV1=PREFIX1 [ABBREV2=PREFIX2] [...]
+
+Where:
+
+ - URI* are a well-formed SKOS vocabulary URIs
+ - ABBREV* are a short alphanumeric abbreviation for the URI
+ - L* are a two-letter ISO3660 Country identifiers
+
+The SKOS vocabs named will be downloaded and written out as JSON in the format used by MykoMap.
+
+The abbreviations will be used when abbreviating URIs in the output.
+
+The JSON vocab will include terms in the specified languages, or if absent, all available languages
+
+
+USAGE
+  
+  end
+  
+  # Generate a vocab index.
+  #
+  # - out is an IO stream to write to
+  # - languages is a list of 2-letter country codes
+  # - uris is hash mapping prefixes to URIs
+  def generate(out, languages, uris)
+    
+    graph = RDF::Graph.new
+    uris.each do |uri, prefix|
+      uri = uri.sub(%r{/+$}, '') # remove the trailing slash, or we don't get the .ttl file
+      Log.debug "loading vocab #{prefix}: from #{uri}"
+      graph << RDF::Graph.load(uri, headers: {'Accept' => 'text/turtle'})
+    end
+    
+    vocab_indexer = SeOpenData::VocabToIndex.new(graph.to_enum)
+    
+    config = {
+      languages: languages,
+      vocabularies: [
+        { uris: uris }
+      ],
+    }
+    Log.debug "Using config: #{config}"
+    
+    vocab_index = vocab_indexer.aggregate(config)
+    Log.debug "writing vocab index"
+    out.puts(JSON.generate(vocab_index))
+  end
+
+  # Parse and validate ARGV and use the result to invoke #generate
+  def run(filename = File.basename(__FILE__))
+    opts = GetoptLong.new(
+      [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+      [ '--langs', '-l',  GetoptLong::REQUIRED_ARGUMENT],
+    )
+
+    languages = []
+    opts.each do |opt, arg|
+      case opt
+      when '--help'
+        warn usage
+        return
+      when '--langs'
+        languages.push(*arg.split(/,\s*/))
+      end
+    end
+    
+    abort usage(filename, opts.error) if opts.error? or ARGV.length == 0
+    
+    errors = []
+    languages.each do |lang|
+      errors.push("invalid language code: '#{lang}'") unless lang =~ /^[a-z][a-z]$/i
+    end
+      
+    uris = {}
+    ARGV.each do |vocab|
+      (abbrev, uristr) = vocab.split('=', 2)
+      case abbrev
+      when /^\w+$/
+        
+      when ''
+        errors.push("Invalid empty abbrev in param '#{vocab}'")
+        next
+        
+      else
+        errors.push("Invalid abbrev '#{abbrev}' in param '#{vocab}'")
+        next
+      end
+      
+      if uris.has_key?(uristr)
+        errors.push("Uris can only be specified once: '#{uristr}' in '#{vocab}'")
+        next    
+      end
+      
+      if uris.has_value?(abbrev)
+        errors.push("Abbrevs can only be specified once: '#{abbrev}' in '#{vocab}'")
+        next    
+      end
+      
+      case uristr
+      when %r{^https?://}i
+        
+      when ''
+        errors.push("Invalid empty URI in param '#{vocab}'")
+        next
+        
+      else
+        errors.push("Invalid URI '#{uristr}' in param '#{vocab}'")
+        next
+      end
+      
+      uri = begin
+              URI.parse(uristr)
+            rescue => e
+              errors.push("Invalid URI in param '#{vocab}': #{e}")
+              next
+            end
+      
+      uris[uristr] = abbrev
+    end
+
+    if errors.length > 0
+      abort usage(filename, errors.join("\n"))
+    end
+    
+    generate($stdout, languages, uris)
+  end
+
+end
+
+VocabJson.new.run
