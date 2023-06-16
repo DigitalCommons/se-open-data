@@ -310,6 +310,7 @@ module SeOpenData
       };
 
       vocab_srcs.each do |vocab_src|
+        Log.debug("Getting vocab_src #{vocab_src}")
         vocab_src_uris = vocab_src[:uris] || {}
 
         # Get the scheme query, and transform it into a hash of
@@ -332,8 +333,10 @@ module SeOpenData
           
           schemes
         end
-
+        Log.debug("Got schemes: #{schemes.to_a}")
+        
         # Now iterate the target languages, and build the result datastructre
+        Log.debug("Got languages: #{languages}")
         languages.each do |lang|
 
           schemes.each do |scheme, scheme_langs|
@@ -353,12 +356,14 @@ module SeOpenData
             
             # Create vocab from this list of concepts, merged with the defaults
             # with no language.
-            vocab[norm_lang.to_sym] = {
+            v = vocab[norm_lang.to_sym] = {
               title: (lang_title.empty? ? nolang_title : lang_title),
               terms: nolang_terms.merge(
                 index_terms(concepts, norm_lang, prefix2uri)
               ),
             }
+            Log.debug("Got vocab #{abbrev_scheme} '#{v[:title]}' in #{norm_lang} "+
+                      "(#{v[:terms].keys.size} terms)}")
           end
         end
       end
