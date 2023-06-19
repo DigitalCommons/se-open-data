@@ -60,5 +60,23 @@ describe "SeOpenData::CSV::add_postcode_lat_long" do
 
   end
 
+  describe "CoopsUK data geocoding" do
+    converted = File.join(data_dir, "coopsuk-input.csv")
+    output = File.join(generated_dir, "coopsuk-output.csv")
+    expected = File.join(data_dir, "coopsuk-expected.csv")
+
+    SeOpenData::CSV.add_postcode_lat_long(infile: converted,
+                                          outfile: output,
+                                          api_key: api_key,
+                                          lat_lng_cache: llcache,
+                                          postcode_global_cache: pgcache,
+                                          use_ordinance_survey: true)
+     
+    it "should generate ther expected output file" do
+      value(CSV.read(output)).must_equal CSV.read(expected)
+    end
+
+  end
+
 
 end
