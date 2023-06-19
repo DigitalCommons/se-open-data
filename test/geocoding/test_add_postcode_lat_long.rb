@@ -21,8 +21,8 @@ describe "SeOpenData::CSV::add_postcode_lat_long" do
   pass = SeOpenData::Utils::PasswordStore.new(use_env_vars: true)
   api_key = pass.get 'geoapifyAPI.txt'
   
-  llcache = '../../../../caches/postcode_lat_lng.json'
-  pgcache = '../../../../caches/geodata_cache.json'
+  llcache = '../open-data/caches/postcode_lat_lng.json'
+  pgcache = '../open-data/caches/geodata_cache.json'
   
   describe "ICA data geocoding" do
     converted = File.join(data_dir, "ica-input.csv")
