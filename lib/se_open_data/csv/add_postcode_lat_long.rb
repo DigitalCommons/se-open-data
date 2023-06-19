@@ -46,8 +46,7 @@ module SeOpenData
                      :region,
                      :postcode), # -> address_headers
         replace_address,
-        geocoder_headers,
-        geocoder,
+        api_key,
         use_ordinance_survey
       )
     ensure
@@ -91,22 +90,27 @@ module SeOpenData
       new_headers,
       postcodeunit_cache,
       csv_opts = {},
-      global_postcode_cache = nil,
+      global_postcode_cache,
       address_headers,
       replace_address,
-      geocoder_headers,
-      geocoder_standard,
+      api_key,
       use_ordinance_survey
     )
       csv_opts.merge!(headers: true)
       csv_in = ::CSV.new(input_io, **csv_opts)
       csv_out = ::CSV.new(output_io)
 
-      postcode_client = SeOpenData::RDF::OsPostcodeUnit::Client.new(postcodeunit_cache)
-      global_postcode_client = nil
-      if global_postcode_cache != nil
-        global_postcode_client = SeOpenData::RDF::OsPostcodeGlobalUnit::Client.new(global_postcode_cache, geocoder_standard)
+      geocoder_standard = nil
+      geocoder_headers = nil
+      # Geoapify API key required
+      geocoder_standard = SeOpenData::CSV::Standard::GeoapifyStandard::Geocoder.new(api_key)
+      geocoder_headers = SeOpenData::CSV::Standard::GeoapifyStandard::Headers
+
+      if use_ordinance_survey
+        postcode_client = SeOpenData::RDF::OsPostcodeUnit::Client.new(postcodeunit_cache)
       end
+      
+      global_postcode_client = SeOpenData::RDF::OsPostcodeGlobalUnit::Client.new(global_postcode_cache, geocoder_standard)
 
       #add global postcode
       headers = nil

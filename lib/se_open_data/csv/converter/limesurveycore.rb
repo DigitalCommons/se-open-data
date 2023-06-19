@@ -249,19 +249,12 @@ module SeOpenData
         # @param postcode_global_cache The path to JSON file into which to cache global
         # address geolocations
         # @param to_schema An SeOpenData::CSV::Schema instance defining the output schema
-        def self.add_postcode_lat_long(infile:, outfile:, api_key: nil, lat_lng_cache:,
-                                       postcode_global_cache: nil, to_schema: )
+        def self.add_postcode_lat_long(infile:, outfile:, api_key:, lat_lng_cache:,
+                                       postcode_global_cache:, to_schema: , use_ordinance_survey: true)
           input = File.open(infile, "r:bom|utf-8")
           output = File.open(outfile, "w")
 
-          geocoder = nil
-          geocoder_headers = nil
-          if postcode_global_cache
-            # Geoapify API key required
-            geocoder = SeOpenData::CSV::Standard::GeoapifyStandard::Geocoder.new(api_key)
-            geocoder_headers = SeOpenData::CSV::Standard::GeoapifyStandard::Headers
-          end
-          
+          use_ordinance_survey = postcode_global_cache == nil
           headers = to_schema.to_h
           SeOpenData::CSV._add_postcode_lat_long(
             input,
@@ -281,9 +274,8 @@ module SeOpenData
                     :region,
                     :postcode),
             false,
-            geocoder_headers,
-            geocoder,
-            true
+            api_key,
+            use_ordinance_survey
           )
         ensure
           input.close
