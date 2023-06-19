@@ -254,13 +254,17 @@ module SeOpenData
           input = File.open(infile, "r:bom|utf-8")
           output = File.open(outfile, "w")
 
-          use_ordinance_survey = postcode_global_cache == nil
           headers = to_schema.to_h
+          postcode_field, country_field = headers.fetch_values(:postcode, :country_name)
+          raise "missing :postcode field in schema" unless postcode_field
+          raise "missing :country_name field in schema" unless country_field
+          
+          use_ordinance_survey = postcode_global_cache == nil
           SeOpenData::CSV._add_postcode_lat_long(
             input,
             output,
-            headers[:postcode],
-            headers[:country_name],
+            postcode_field,
+            country_field,
             subhash(headers,
                     :geocontainer,
                     :geocontainer_lat,
