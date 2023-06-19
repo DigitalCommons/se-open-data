@@ -245,26 +245,31 @@ module SeOpenData
         # @param outfile A file path to write to
         # @param api_key An API key to use for the global geocoder, optional if
         # postcode_global_cache not set
+        # @param country_field_id The field id to use as the country component of the lookup
+        # defaults to :country_name for historical backward compatibility.
         # @param lat_lng_cache The path to a JSON file into which to cache postcode geolocations
         # @param postcode_global_cache The path to JSON file into which to cache global
         # address geolocations
         # @param to_schema An SeOpenData::CSV::Schema instance defining the output schema
-        def self.add_postcode_lat_long(infile:, outfile:, api_key:, lat_lng_cache:,
-                                       postcode_global_cache:, to_schema: , use_ordinance_survey: true)
+        def self.add_postcode_lat_long(infile:, outfile:, api_key:,
+                                       country_field_id: :country_name,
+                                       lat_lng_cache:, postcode_global_cache:,
+                                       to_schema:, use_ordinance_survey: true)
           input = File.open(infile, "r:bom|utf-8")
           output = File.open(outfile, "w")
 
           headers = to_schema.to_h
-          postcode_field, country_field = headers.fetch_values(:postcode, :country_name)
-          raise "missing :postcode field in schema" unless postcode_field
-          raise "missing :country_name field in schema" unless country_field
+          postcode_field_id = :postcode
+          postcode_header, country_header = headers.fetch_values(postcode_field_id, country_field_id)
+          raise "missing #{postcode_field_id} field in schema" unless postcode_header
+          raise "missing #{country_field_id} field in schema" unless country_header
           
           use_ordinance_survey = postcode_global_cache == nil
           SeOpenData::CSV._add_postcode_lat_long(
             input,
             output,
-            postcode_field,
-            country_field,
+            postcode_header,
+            country_header,
             subhash(headers,
                     :geocontainer,
                     :geocontainer_lat,
