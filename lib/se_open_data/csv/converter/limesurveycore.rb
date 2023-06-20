@@ -251,10 +251,13 @@ module SeOpenData
         # @param postcode_global_cache The path to JSON file into which to cache global
         # address geolocations
         # @param to_schema An SeOpenData::CSV::Schema instance defining the output schema
+        # @param replace_address A boolean value, if true addresses in the CSV are replaced with
+        # the resolved address from the geocoder. Defaults to false.
         def self.add_postcode_lat_long(infile:, outfile:, api_key:,
                                        country_field_id: :country_name,
                                        lat_lng_cache:, postcode_global_cache:,
-                                       to_schema:, use_ordinance_survey: true)
+                                       to_schema:, use_ordinance_survey: true,
+                                       replace_address: false)
           input = File.open(infile, "r:bom|utf-8")
           output = File.open(outfile, "w")
 
@@ -281,7 +284,7 @@ module SeOpenData
                     :locality,
                     :region,
                     :postcode),
-            false,
+            replace_address,
             api_key,
             use_ordinance_survey
           )
