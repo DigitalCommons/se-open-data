@@ -264,7 +264,6 @@ module SeOpenData
           raise "missing #{postcode_field_id} field in schema" unless postcode_header
           raise "missing #{country_field_id} field in schema" unless country_header
           
-          use_ordinance_survey = postcode_global_cache == nil
           SeOpenData::CSV._add_postcode_lat_long(
             input,
             output,
