@@ -22,41 +22,15 @@ module SeOpenData
     def self.add_postcode_lat_long(infile:, outfile:,
                                    api_key:, lat_lng_cache:, postcode_global_cache:,
                                    replace_address: false, csv_opts: {}, use_ordinance_survey: false)
-      input = File.open(infile, "r:bom|utf-8")
-      output = File.open(outfile, "w")
-      geocoder = SeOpenData::CSV::Standard::GeoapifyStandard::Geocoder.new(api_key)
-      geocoder_headers = SeOpenData::CSV::Standard::GeoapifyStandard::Headers
-      # This returns a hash whose keys are the intersection of `keys` and `hash.keys`
-      # and values are the corresponding hash values.
-      subhash = lambda do |hash, *keys|
-        keys = keys.select { |k| hash.key?(k) }
-        Hash[keys.zip(hash.values_at(*keys))]
-      end
-      headers = StdSchema.to_h
-      SeOpenData::CSV._add_postcode_lat_long(
-        input,
-        output,
-        StdSchema.field(:postcode).header,
-        StdSchema.field(:country_id).header,
-        subhash.call(headers,
-                     :geocontainer,
-                     :geocontainer_lat,
-                     :geocontainer_lon),
-        lat_lng_cache,
-        csv_opts,
-        postcode_global_cache,
-        subhash.call(headers,
-                     :street_address,
-                     :locality,
-                     :region,
-                     :postcode), # -> address_headers
-        replace_address,
-        api_key,
-        use_ordinance_survey
+      add_postcode_lat_long2(
+        infile: infile, outfile: outfile,
+        api_key: api_key,
+        lat_lng_cache: lat_lng_cache, postcode_global_cache: postcode_global_cache,
+        to_schema: StdSchema,
+        use_ordinance_survey: use_ordinance_survey,
+        replace_address: replace_address,
+        csv_opts: csv_opts,
       )
-    ensure
-      input.close
-      output.close
     end
 
     # Fill out the geocoding fields in a CSV
@@ -87,11 +61,13 @@ module SeOpenData
     # @param to_schema An SeOpenData::CSV::Schema instance defining the output schema
     # @param replace_address A boolean value, if true addresses in the CSV are replaced with
     # the resolved address from the geocoder. Defaults to false.
+    # @param csv_opts [Hash] options to pass to CSV when parsing input_io (in addition to `headers: true`)
     def self.add_postcode_lat_long2(infile:, outfile:, api_key:,
                                     country_field_id: :country_name,
                                     lat_lng_cache:, postcode_global_cache:,
                                     to_schema:, use_ordinance_survey: true,
-                                    replace_address: false)
+                                    replace_address: false,
+                                    csv_opts: {})
       input = File.open(infile, "r:bom|utf-8")
       output = File.open(outfile, "w")
 
@@ -111,7 +87,7 @@ module SeOpenData
                 :geocontainer_lat,
                 :geocontainer_lon),
         lat_lng_cache,
-        {},
+        csv_opts,
         postcode_global_cache,
         subhash(headers,
                 :street_address,
