@@ -13,7 +13,7 @@ Minitest::Test::make_my_diffs_pretty!
 StdSchema3 = SeOpenData::CSV::Schemas::Versions[2]
 StdSchema4 = SeOpenData::CSV::Schemas::Versions[3]
 
-describe "SeOpenData::CSV::Converter::LimeSurveyCore" do
+describe "SeOpenData::CSV.add_postcode_lat_long" do
 
   caller_dir = File.absolute_path(__dir__)
   data_dir = caller_dir+"/source-data"
