@@ -193,11 +193,13 @@ module SeOpenData
           # Transforms the rows from Co-ops UK schema to our standard
           # Note the BOM and encoding flags, which avoid a MalformedCSVError
           converter.convert File.open(original_csv, "r:bom|utf-8"), initial_pass
-          SeOpenData::CSV.add_postcode_lat_long2(
+          SeOpenData::CSV.add_postcode_lat_long(
             infile: initial_pass, outfile: output_csv,
             api_key: api_key, lat_lng_cache: config.POSTCODE_LAT_LNG_CACHE,
             postcode_global_cache: config.GEODATA_CACHE,
-            to_schema: to_schema
+            to_schema: to_schema,
+            replace_address: false,
+            use_ordinance_survey: true,
           )
         rescue => e
           raise "error transforming #{original_csv} into #{output_csv}: #{e.message}"
