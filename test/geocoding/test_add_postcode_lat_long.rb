@@ -33,7 +33,7 @@ describe "SeOpenData::CSV::Converter::LimeSurveyCore" do
     output = File.join(generated_dir, "ica-output.csv")
     expected = File.join(data_dir, "ica-expected.csv")
 
-    SeOpenData::CSV::Converter::LimeSurveyCore.add_postcode_lat_long(
+    SeOpenData::CSV.add_postcode_lat_long2(
       infile: converted,
       outfile: output,
       to_schema: StdSchema3,
@@ -56,7 +56,7 @@ describe "SeOpenData::CSV::Converter::LimeSurveyCore" do
     output = File.join(generated_dir, "dotcoop-output.csv")
     expected = File.join(data_dir, "dotcoop-expected.csv")
 
-    SeOpenData::CSV::Converter::LimeSurveyCore.add_postcode_lat_long(
+    SeOpenData::CSV.add_postcode_lat_long2(
       infile: converted,
       outfile: output,
       to_schema: StdSchema3,
@@ -79,7 +79,7 @@ describe "SeOpenData::CSV::Converter::LimeSurveyCore" do
     output = File.join(generated_dir, "coopsuk-output.csv")
     expected = File.join(data_dir, "coopsuk-expected.csv")
 
-    SeOpenData::CSV::Converter::LimeSurveyCore.add_postcode_lat_long(
+    SeOpenData::CSV.add_postcode_lat_long2(
       infile: converted,
       outfile: output,
       api_key: api_key,
