@@ -55,24 +55,6 @@ module SeOpenData
                                    country_field_id: :country_name,
                                    replace_address: false, csv_opts: {},
                                    use_ordinance_survey: false)
-      add_postcode_lat_long2(
-        infile: infile, outfile: outfile,
-        api_key: api_key,
-        lat_lng_cache: lat_lng_cache, postcode_global_cache: postcode_global_cache,
-        to_schema: to_schema,
-        country_field_id: country_field_id,
-        use_ordinance_survey: use_ordinance_survey,
-        replace_address: replace_address,
-        csv_opts: csv_opts,
-      )
-    end
-
-    def self.add_postcode_lat_long2(infile:, outfile:, api_key:,
-                                    country_field_id: :country_name,
-                                    lat_lng_cache:, postcode_global_cache:,
-                                    to_schema:, use_ordinance_survey: true,
-                                    replace_address: false,
-                                    csv_opts: {})
       input = File.open(infile, "r:bom|utf-8")
       output = File.open(outfile, "w")
 
