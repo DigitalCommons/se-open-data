@@ -19,7 +19,8 @@ module SeOpenData
       Hash[keys.zip(hash.values_at(*keys))]
     end
     
-    # Fill out the geocoding fields in a CSV
+    # Transforms a CSV file, adding latitude and longitude fields
+    # obtained by geocoding a postcode field.
     #
     # Assumes the input and output CSV uses the schema
     # `to_schema`. Reads the address from the input fields with id
@@ -35,20 +36,28 @@ module SeOpenData
     # then if the postcode is not present or not a valid UK
     # postcode, it will attempt a global geocoding of the address.
     #
-    # @param infile [String] A file path to read from
-    # @param outfile [String] A file path to write to
+    # @param input [IO, File] file or stream to read CSV data from
+    # @param output [IO, File] file or stream to write CSV data to
     # @param api_key [String] An API key to use for the global geocoder, optional if
     # postcode_global_cache not set
-    # @param lat_lng_cache [String] The path to a JSON file into which to cache postcode geolocations
+    # @param lat_lng_cache [String] The path to a JSON file into which to cache OS postcode
+    # geolocations
     # @param postcode_global_cache [String] The path to JSON file into which to cache global
-    # @param to_schema [SeOpenData::CSV::Schema] instance defining the output schema
-    # @param country_field_id [String] The field id to use as the country component of the lookup
-    # defaults to :country_name for historical backward compatibility.
     # address geolocations
-    # @param replace_address [Boolean] If true addresses in the CSV are replaced with
-    # the resolved address from the geocoder. Defaults to false.
-    # @param csv_opts [Hash] options to pass to CSV when parsing input_io (in addition to `headers: true`)
-    # @param use_ordinance_survey [Boolean] set true to use ordinance survey to geocode UK postcodes    
+    # @param to_schema [SeOpenData::CSV::Schema] instance defining the output schema
+    # @param country_field_id [Symbol] The id of the CSV schema field to use for the
+    # country component of the address lookup.
+    # Defaults to :country_name for historical backward compatibility.
+    # @param postcode_field_id [Symbol] The id of the CSV schema field to use for the
+    # postcode component of the address lookup.
+    # Defaults to :postcode for historical backward compatibility.
+    # @param replace_address [Boolean|"force"] If true address fields in the output CSV 
+    # are replaced with the resolved address from the geocoder. If "force", this is done even if the
+    # geocoder finds nothing. Defaults to false, and is ignored if use_ordinance_survey is true
+    # (when replacements don't happen)
+    # @param csv_opts [Hash] options to pass to CSV when parsing input_io
+    # (in addition to `headers: true`)
+    # @param use_ordinance_survey [Boolean] set true to use ordinance survey to geocode UK postcodes 
     def self.add_postcode_lat_long(infile:, outfile:,
                                    api_key:, lat_lng_cache:, postcode_global_cache:,
                                    to_schema: StdSchema,
@@ -63,90 +72,41 @@ module SeOpenData
       postcode_header, country_header = headers.fetch_values(postcode_field_id, country_field_id)
       raise "missing #{postcode_field_id} field in schema" unless postcode_header
       raise "missing #{country_field_id} field in schema" unless country_header
-      
-      SeOpenData::CSV._add_postcode_lat_long(
-        input,
-        output,
-        postcode_header,
-        country_header,
+
+      # IDs and header names of additional geocoded CSV fields to
+      # populate (if replace_address is false, only these are
+      # populated, else address_headers are too)
+      new_headers = 
         subhash(headers,
                 :geocontainer,
                 :geocontainer_lat,
-                :geocontainer_lon),
-        lat_lng_cache,
-        csv_opts,
-        postcode_global_cache,
+                :geocontainer_lon)
+
+      # IDs and header names of address fields to write. Only required
+      # if postcode_global_cache defined. 
+      address_headers =
         subhash(headers,
                 :street_address,
                 :locality,
                 :region,
-                :postcode),
-        replace_address,
-        api_key,
-        use_ordinance_survey
-      )
-    ensure
-      input.close
-      output.close
-    end
-
-    # Transforms a CSV file, adding latitude and longitude fields
-    # obtained by geocoding a postcode field.
-    #
-    # - should take in which headers to change with which standard STANDARD_HEADERS from global
-    # - should have boolean weather to change addresses
-    # - postcode unit cache is legacy?
-    #
-    # TODO: this is becoming a noodle factory, fix and clean it
-    #
-    # TODO: abstract away so that you only pass the standard and the io and it does the work for you
-    #
-    # @param input_io [IO, File] file or stream to read CSV data from
-    # @param output_io [IO, File] file or stream to write CSV data to
-    # @param input_csv_postcode_header [String] header of input CSV field containing postcodes
-    # @param input_country_header [String] header of input CSV field containing country names
-    # @param new_headers [Hash<Symbol,String>] IDs and header names of additional geocoded CSV
-    # fields to populate (if replace_address is false, only these are populated, else
-    # address_headers are too)
-    # @param postcodeunit_cache [String] JSON file where OS postcode unit results are cached (passed to
-    # {SeOpenData::RDF::OsPostcodeUnit::Client})
-    # @param csv_opts [Hash] options to pass to CSV when parsing input_io (in addition to `headers: true`)
-    # @param global_postcode_cache [String] optional path to a JSON file where all the postcodes are kept (passed to {SeOpenData::RDF::OsPostcodeGlobalUnit::Client}). If absent, no global geocoding is done, so geocoder_standard need not be set.
-    # @param address_headers [Hash<Symbol,String>] IDs and header names of address fields to write. Only required if global_postcode_cache defined.
-    # @param replace_address [Boolean] set to true if we should replace the current address headers && set to "force" if we should replace the headers with whatever the geocoder finds (i.e.replace the field even if the geocoder finds nothing). Only required if global_postcode_cache defined.
-    # @param geocoder_headers [Hash<Symbol,String>] defines geocoded header names (and their
-    # mapping to keys of the returned geocoder data hash). Only required if global_postcode_cache defined.
-    # @param geocoder_standard [#get_new_data(search_key,country)] a geocoder, only used if global_postcode_cache defined.
-    # @param use_ordinance_survey [Boolean] set true to use ordinance survey to geocode UK postcodes
-    def self._add_postcode_lat_long(
-      input_io,
-      output_io,
-      input_csv_postcode_header,
-      input_country_header,
-      new_headers,
-      postcodeunit_cache,
-      csv_opts = {},
-      global_postcode_cache,
-      address_headers,
-      replace_address,
-      api_key,
-      use_ordinance_survey
-    )
+                :postcode)
+      
       csv_opts.merge!(headers: true)
-      csv_in = ::CSV.new(input_io, **csv_opts)
-      csv_out = ::CSV.new(output_io)
+      csv_in = ::CSV.new(input, **csv_opts)
+      csv_out = ::CSV.new(output)
 
-      geocoder_standard = nil
-      geocoder_headers = nil
       # Geoapify API key required
       geocoder_standard = SeOpenData::CSV::Standard::GeoapifyStandard::Geocoder.new(api_key)
+
+      # geocoded header names (and their mapping to keys of the
+      # returned geocoder data hash).
       geocoder_headers = SeOpenData::CSV::Standard::GeoapifyStandard::Headers
 
       if use_ordinance_survey
-        postcode_client = SeOpenData::RDF::OsPostcodeUnit::Client.new(postcodeunit_cache)
+        postcode_client = SeOpenData::RDF::OsPostcodeUnit::Client.new(lat_lng_cache)
       end
       
-      global_postcode_client = SeOpenData::RDF::OsPostcodeGlobalUnit::Client.new(global_postcode_cache, geocoder_standard)
+      global_postcode_client = SeOpenData::RDF::OsPostcodeGlobalUnit::Client.new(postcode_global_cache, geocoder_standard)
 
       #add global postcode
       headers = nil
@@ -160,8 +120,8 @@ module SeOpenData
         end
         prog_ctr.step
         # Only run if matches uk postcodes
-        postcode = row[input_csv_postcode_header]
-        country = row[input_country_header]
+        postcode = row[postcode_header]
+        country = row[country_header]
         if use_ordinance_survey && uk_postcode?(postcode) # UCOMMENT TO USE ORDINANCE SURVEY FOR UK POSTCODE GEOLOCATION
           pcunit = postcode_client.get(postcode)
           loc_data = {
@@ -232,6 +192,10 @@ module SeOpenData
       if global_postcode_client
         global_postcode_client.finalize(0)
       end
+      
+    ensure
+      input.close
+      output.close
     end
   end
 end
