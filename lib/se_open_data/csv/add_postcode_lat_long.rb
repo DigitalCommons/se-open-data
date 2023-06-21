@@ -89,7 +89,7 @@ module SeOpenData
                 :street_address,
                 :locality,
                 :region,
-                :postcode)
+                postcode_field_id)
       
       csv_opts.merge!(headers: true)
       csv_in = ::CSV.new(input, **csv_opts)
