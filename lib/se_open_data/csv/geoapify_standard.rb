@@ -71,7 +71,7 @@ module SeOpenData
 
             results = HTTParty.get(url)
             if results.code != 200
-              raise "Failed to geocode search key: #{search_key}"
+              raise "Failed to geocode search key: #{search_key} via #{url}: #{results.message}, #{results.parsed_response['message']}"
             end
 
             res_raw_json = JSON.parse(results.to_s)["features"]
