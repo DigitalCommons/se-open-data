@@ -1,5 +1,6 @@
 require "csv"
 require "json"
+require "pstore"
 require "normalize_country"
 #require "se_open_data/utils/deployment"
 require "se_open_data/utils/log_factory"
@@ -53,6 +54,42 @@ module SeOpenData::Utils::Geocoding
 
   end
   
+  class PstoreCache
+    Log = SeOpenData::Utils::LogFactory.default
+    
+    def initialize(filename)
+      @file = filename
+      @pstore = PStore.new(filename)
+    end
+
+    def keys
+      @pstore.transaction { @pstore.roots }
+    end
+
+    def key?(key)
+      @pstore.transaction do
+        @pstore.root?(key)
+      end
+    end
+
+    def get(key)
+      @pstore.transaction do
+        @pstore[key]
+      end
+    end
+
+    def add(key, value)
+      warn ">> add #{key}: #{value}"
+      @pstore.transaction do
+        @pstore[key] = value;
+      end
+    end
+
+    def finalize(object_id)
+    end
+
+  end
+  
   class LookupCache
     # Create a log instance
     Log = SeOpenData::Utils::LogFactory.default
@@ -65,7 +102,7 @@ module SeOpenData::Utils::Geocoding
 
     def initialize(csv_cache_filename, geocoder_standard)
       @geocoder = geocoder_standard
-      @cache = JsonCache.new(csv_cache_filename)      
+      @cache = PstoreCache.new(csv_cache_filename+'.pstore')
     end
 
     # @param address_array - an array that contains the address

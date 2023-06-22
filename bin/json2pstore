@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require_relative '../lib/load_path'
+require 'se_open_data/utils/geocoding'
+
+json_file = ARGV[0]
+pstore_file = ARGV[1]
+
+jc = SeOpenData::Utils::Geocoding::JsonCache.new(json_file)
+pc = PStore.new(pstore_file)
+
+pc.transaction do
+  jc.keys.each do |key|
+    warn "adding #{key}"
+    pc[key] = jc.get(key)
+  end
+end
