@@ -5,6 +5,7 @@ module SeOpenData
     require "se_open_data/csv/schemas"
     require "se_open_data/csv/standard"
     require "se_open_data/utils/postcode_uk"
+    require "se_open_data/utils/geocoding"
 
     PostcodeUk = SeOpenData::Utils::PostcodeUk
     
@@ -209,7 +210,7 @@ module SeOpenData
         # returned geocoder data hash).
         @geocoder_headers = SeOpenData::CSV::Standard::GeoapifyStandard::Headers
         
-        @global_postcode_client = SeOpenData::RDF::OsPostcodeGlobalUnit::Client.new(
+        @global_postcode_client = SeOpenData::Utils::Geocoding::LookupCache.new(
           cache_file, geocoder_standard
         )
       end

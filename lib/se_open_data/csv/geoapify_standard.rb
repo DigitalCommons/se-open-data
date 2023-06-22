@@ -10,8 +10,8 @@ module SeOpenData
         require "normalize_country"
         require "se_open_data/initiative/rdf/config"
         require "se_open_data/rdf/os_postcode_unit"
-        require "se_open_data/rdf/os_postcode_global_unit"
         require "se_open_data/utils/progress_counter"
+        require "se_open_data/utils/geocoding"
 
         Limit = 11000
 
@@ -123,7 +123,7 @@ module SeOpenData
 
             # load standard file entries into map
             # match both maps to their entries
-            client = SeOpenData::RDF::OsPostcodeGlobalUnit::Client
+            client = SeOpenData::Utils::Geocoding::LookupCache
             addr_headers = Headers.keys.map { |a| SeOpenData::CSV::Standard::V1::Headers[a] }
 
             ::CSV.foreach(generated_standard_file, headers: true) do |row|
@@ -203,7 +203,7 @@ module SeOpenData
             # is a map {key: properties}
             entries_json = JSON.load entries_raw
             addr_headers = Headers.keys.map { |a| SeOpenData::CSV::Standard::V1::Headers[a] }
-            client = SeOpenData::RDF::OsPostcodeGlobalUnit::Client
+            client = SeOpenData::Utils::Geocoding::LookupCache
             headers = nil
 
             ::CSV.open(File.join(gen_dir, "marked_confidence_entries.csv"), "w") do |csv|
