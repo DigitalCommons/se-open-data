@@ -66,7 +66,7 @@ module SeOpenData
             url = "https://api.geoapify.com/v1/geocode/search?text=#{uri_search_key}&limit=1&apiKey=#{@api_key}"
             cn = NormalizeCountry(country, to: :alpha2)
             if cn
-              url = "https://api.geoapify.com/v1/geocode/search?text=#{uri_search_key}&&filter=countrycode:#{cn}&limit=1&apiKey=#{@api_key}"
+              url = "https://api.geoapify.com/v1/geocode/search?text=#{uri_search_key}&&filter=countrycode:#{cn.downcase}&limit=1&apiKey=#{@api_key}"
             end
 
             results = HTTParty.get(url)
