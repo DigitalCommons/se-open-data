@@ -6,6 +6,52 @@ require "se_open_data/utils/log_factory"
 require "se_open_data/utils/postcode_uk"
 
 module SeOpenData::Utils::Geocoding
+
+  class JsonCache
+    Log = SeOpenData::Utils::LogFactory.default
+    
+    def initialize(filename)
+      @file = filename
+      @dirty = false # will be set true if the cache is changed.
+      
+      if File.exist?(filename)
+        @cache = JSON.load(File.read(filename))
+      else
+        @cache = {}
+        # create empty object
+        File.open(filename, "w") { |f| f.write("{}") }
+      end
+      
+    end
+
+    def keys
+      @cache.keys
+    end
+
+    def key?(key)
+      @cache.key?(key)
+    end
+
+    def get(key)
+      @cache[key]
+    end
+
+    def add(key, value)
+      @dirty = true
+      @cache[key] = value;
+    end
+
+    def finalize(object_id)
+      #save cache if it has been updated
+      if @dirty
+        Log.info "SAVING NEW CACHE"
+        File.open(@csv_cache_file, "w") do |f|
+          f.puts JSON.pretty_generate(@cache)
+        end
+      end
+    end
+
+  end
   
   class LookupCache
     # Create a log instance
@@ -19,32 +65,7 @@ module SeOpenData::Utils::Geocoding
 
     def initialize(csv_cache_filename, geocoder_standard)
       @geocoder = geocoder_standard
-      @csv_cache_file = csv_cache_filename
-      #load cache into memory (probably needs to be i/o in the future)
-      csv_cache_f = nil
-
-      if File.exist?(csv_cache_file)
-        csv_cache_f = File.read(csv_cache_file)
-      else
-        # create empty object
-        File.open(csv_cache_file, "w") { |f| f.write("{}") }
-        csv_cache_f = File.read(csv_cache_file)
-      end
-
-      @cache = JSON.load csv_cache_f
-      @dirty = false # will be set true if the cache is changed.
-      
-      #ObjectSpace.define_finalizer(self, method(:finalize))#make sure this works throughout the versions
-    end
-
-    def finalize(object_id)
-      #save cache if it has been updated
-      if @dirty
-        Log.info "SAVING NEW CACHE"
-        File.open(@csv_cache_file, "w") do |f|
-          f.puts JSON.pretty_generate(@cache)
-        end
-      end
+      @cache = JsonCache.new(csv_cache_filename)      
     end
 
     # @param address_array - an array that contains the address
@@ -75,11 +96,11 @@ module SeOpenData::Utils::Geocoding
         cached_entry = {}
         #if key exists get it from cache
         if @cache.key?(search_key)
-          cached_entry = @cache[search_key]
+          cached_entry = @cache.get(search_key)
         else
           #else get address using client and append to cache
           cached_entry = @geocoder.get_new_data(search_key, country)
-          @cache.merge!({ search_key => cached_entry })
+          @cache.add(search_key, cached_entry)
           @dirty = true
         end
 
@@ -90,7 +111,7 @@ module SeOpenData::Utils::Geocoding
       rescue StandardError => msg
         Log.error msg
         #save due to crash
-        finalize(0)
+        @cache.finalize(0)
         #if error from client-side or server, stop
         if msg.message.include?("4") || msg.message.include?("5")
           raise msg
@@ -98,6 +119,10 @@ module SeOpenData::Utils::Geocoding
         #continue to next one otherwise
         return nil
       end
+    end
+
+    def finalize(oid)
+      @cache.finalize(oid)
     end
   end
 end
