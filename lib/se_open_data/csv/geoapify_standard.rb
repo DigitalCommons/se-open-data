@@ -97,7 +97,10 @@ module SeOpenData
             return res
           end
 
-          def gen_geo_report(cached_entries_file, confidence_level = 0.25, gen_dir, generated_standard_file, headers_to_not_print)
+          private
+
+          # FIXME possibly unused?
+          def _gen_geo_report(cached_entries_file, confidence_level = 0.25, gen_dir, generated_standard_file, headers_to_not_print)
             return unless File.exist?(cached_entries_file)
 
             # read in entries
@@ -191,7 +194,8 @@ module SeOpenData
             end
           end
 
-          def gen_geo_location_confidence_csv(cached_entries_file, gen_dir, generated_standard_file, low_bar = 0.25)
+          # FIXME possibly unused?
+          def _gen_geo_location_confidence_csv(cached_entries_file, gen_dir, generated_standard_file, low_bar = 0.25)
             return unless File.exist?(cached_entries_file)
             system "mkdir", "-p", gen_dir
             # read in entries
