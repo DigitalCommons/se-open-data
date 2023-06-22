@@ -4,6 +4,10 @@ module SeOpenData
   module CSV
     require "se_open_data/csv/schemas"
     require "se_open_data/csv/standard"
+    require "se_open_data/utils/postcode_uk"
+
+    PostcodeUk = SeOpenData::Utils::PostcodeUk
+    
     
     # The latest output schema
     StdSchema = SeOpenData::CSV::Schemas::Versions[-1]
@@ -300,7 +304,7 @@ module SeOpenData
       def transform_row(row)
         postcode = row[@postcode_header]
         
-        if uk_postcode?(postcode)
+        if PostcodeUk.valid?(postcode)
           pcunit = @postcode_client.get(postcode)
           loc_data = {
             geocontainer: pcunit ? pcunit[:within] : nil,
@@ -319,13 +323,6 @@ module SeOpenData
 
         return # nothing
       end
-
-      # Checks whether the parameter is considerd a valid postcode
-      def uk_postcode?(s)
-        @@uk_postcode_regex.match(s)
-      end
-
-      @@uk_postcode_regex = /([Gg][Ii][Rr] 0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9][A-Za-z]?))))\s?[0-9][A-Za-z]{2})/
 
     end
     

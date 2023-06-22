@@ -4,6 +4,7 @@ require "normalize_country"
 require_relative "cache"
 require "se_open_data/utils/deployment"
 require "se_open_data/utils/log_factory"
+require "se_open_data/utils/postcode_uk"
 
 module SeOpenData
   module RDF
@@ -11,6 +12,7 @@ module SeOpenData
       class Client
         # Create a log instance
         Log = SeOpenData::Utils::LogFactory.default
+        PostcodeUk = SeOpenData::Utils::PostcodeUk
         
         attr_accessor :cache
         attr_accessor :initial_cache
@@ -47,17 +49,12 @@ module SeOpenData
           end
         end
 
-        def self.uk_postcode?(s)
-          uk_postcode_regex = /([Gg][Ii][Rr] 0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9][A-Za-z]?))))\s?[0-9][A-Za-z]{2})/
-          uk_postcode_regex.match(s)
-        end
-
         # @param address_array - an array that contains the address
         # @returns - a query for looking up the address
         def self.clean_and_build_address(address_array)
           return nil unless address_array
           address_array.reject! { |addr| addr == "" || addr == nil }
-          address_array.map! { |addr| uk_postcode?(addr) ? addr.gsub(/[!@#$%^&*-]/, " ") : addr } # remove special characters
+          address_array.map! { |addr| PostcodeUk.valid?(addr) ? addr.gsub(/[!@#$%^&*-]/, " ") : addr } # remove special characters
 
           # Expand 2-letter country codes, hackily (best effort, this is all hacky already)
           address_array.map! do |addr|
