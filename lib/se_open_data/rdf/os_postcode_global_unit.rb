@@ -32,14 +32,14 @@ module SeOpenData
           end
 
           @cache = JSON.load csv_cache_f
-          @initial_cache = @cache.clone
-
+          @dirty = false # will be set true if the cache is changed.
+          
           #ObjectSpace.define_finalizer(self, method(:finalize))#make sure this works throughout the versions
         end
 
         def finalize(object_id)
           #save cache if it has been updated
-          if @cache != @initial_cache
+          if @dirty
             Log.info "SAVING NEW CACHE"
             File.open(@csv_cache_file, "w") do |f|
               f.puts JSON.pretty_generate(@cache)
@@ -85,6 +85,7 @@ module SeOpenData
               #else get address using client and append to cache
               cached_entry = @geocoder.get_new_data(search_key, country)
               @cache.merge!({ search_key => cached_entry })
+              @dirty = true
             end
 
             return nil if cached_entry.empty?
