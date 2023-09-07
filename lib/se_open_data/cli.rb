@@ -434,6 +434,13 @@ module SeOpenData
       standard_csv = File.join(config.GEN_DOC_DIR, 'standard.csv')
       FileUtils.cp config.STANDARD_CSV, standard_csv
 
+      # Copy any files from the "extras" dir into GEN_DOC_DIR
+      # (Note, trailing '.' makes cp_r copy contents of extras_dir, not dir itself)
+      extras_dir = File.join(config.TOP_OUTPUT_DIR, 'extras', '.')
+      if File.exist? extras_dir
+        FileUtils.cp_r extras_dir, config.GEN_DOC_DIR
+      end
+
       # Write timestamp and hash metadata. This is so we can see where
       # and how the data was generated.
       # Note, meta.json absent at this point so is not included in doc_hash
