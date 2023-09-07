@@ -400,7 +400,7 @@ module SeOpenData
                                                 ],
                                               })
         vocab_index_file = File.join(config.GEN_DOC_DIR, config.VOCAB_INDEX_FILE)
-        Log.debug "writing vocab index flie #{vocab_index_file}"
+        Log.debug "writing vocab index file #{vocab_index_file}"
         IO.write vocab_index_file, JSON.generate(vocab_index)
       end
 
