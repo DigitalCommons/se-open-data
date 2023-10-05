@@ -15,7 +15,8 @@ module SeOpenData
 
     def self.add_postcode_lat_long(infile:, outfile:,
                                    api_key:, lat_lng_cache:, postcode_global_cache:,
-                                   replace_address: false, csv_opts: {}, use_ordinance_survey: false)
+                                   replace_address: false, csv_opts: {}, use_ordinance_survey: false,
+                                   to_schema: StdSchema)
       input = File.open(infile, "r:bom|utf-8")
       output = File.open(outfile, "w")
       geocoder = SeOpenData::CSV::Standard::GeoapifyStandard::Geocoder.new(api_key)
@@ -26,12 +27,12 @@ module SeOpenData
         keys = keys.select { |k| hash.key?(k) }
         Hash[keys.zip(hash.values_at(*keys))]
       end
-      headers = StdSchema.to_h
+      headers = to_schema.to_h
       SeOpenData::CSV._add_postcode_lat_long(
         input,
         output,
-        StdSchema.field(:postcode).header,
-        StdSchema.field(:country_id).header,
+        to_schema.field(:postcode).header,
+        to_schema.field(:country_id).header,
         subhash.call(headers,
                      :geocontainer,
                      :geocontainer_lat,
