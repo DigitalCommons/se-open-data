@@ -1,8 +1,9 @@
 require 'se_open_data/config'
 require 'se_open_data/utils/log_factory'
 require 'se_open_data/utils/password_store'
-require 'se_open_data/csv/add_postcode_lat_long'
-require 'se_open_data/csv/geoapify_standard'
+require 'se_open_data/utils/file_cache'
+require 'se_open_data/geocoding'
+require 'se_open_data/csv/schemas'
 require 'se_open_data/csv/schema'
 require 'se_open_data/csv/schema/types'
 require 'csv'
@@ -50,6 +51,7 @@ module SeOpenData
         # https://bugs.limesurvey.org/view.php?id=13747
         def self.mk_converter(from_schema:,
                               to_schema:,
+                              geocode:,
                               input_csv_opts: {col_sep: ';', skip_blanks: true})
           from_schema.assert_superset_of SeOpenData::CSV::Schemas::LimeSurveyCore::Latest
           
@@ -109,7 +111,25 @@ module SeOpenData
                         # Don't import this initiative if it isn't approved
                         next unless approved&.downcase == 'yes'
 
-                        (latitude, longitude) = [*location.to_s.split(';'), '', ''].collect &:strip
+                        (latitude, longitude) = location&.split(';')
+                        
+                        geocoded = if latitude.to_s.strip == '' or longitude.to_s.strip == ''
+                                     latitude = longitude = nil
+                                     geocode.call(
+                                       [address_a,
+                                        address_b,
+                                        address_c,
+                                        locality,
+                                        postcode,
+                                        location,
+                                        'UK'].compact
+                                         .select {|it| it != '' }
+                                         .join(", ")                          
+                                     )
+                                   else
+                                     nil
+                                   end
+                        geocontainer = geocoded&.osm_uri
                         {
                           id: id,
                           name: name,
@@ -138,7 +158,8 @@ module SeOpenData
                           locality: locality,
                           region: '',
                           postcode: postcode.to_s.upcase,
-                          country_name: '',
+                          country_id: 'GB',
+                          territory_id: nil,
                           homepage: Types.normalise_url(website),
                           # blank sensitive data until new institutional email field added
                           #phone: normalise_phone_number(phone),
@@ -152,9 +173,9 @@ module SeOpenData
                           companies_house_number: '',
                           latitude: latitude,
                           longitude: longitude,
-                          geocontainer: '',
-                          geocontainer_lat: '',
-                          geocontainer_lon: '',
+                          geocontainer: geocontainer,
+                          geocontainer_lat: geocoded&.lat,
+                          geocontainer_lon: geocoded&.lng,
                         }
           end
         end
@@ -182,21 +203,27 @@ module SeOpenData
           pass = SeOpenData::Utils::PasswordStore.new(use_env_vars: config.USE_ENV_PASSWORDS)
           api_key = pass.get config.GEOCODER_API_KEY_PATH
 
+          # Get a geocoder
+          cache = SeOpenData::Utils::FileCache.new.load(config.GEODATA_CACHE)
+          geocode = SeOpenData::Geocoding.new.build(
+            lookup: :geoapify,
+            api_key: api_key,
+            cache: cache,
+          )
+          
           # Create a csv converter
           from_schema = SeOpenData::CSV::Schema.load_file(config.ORIGINAL_CSV_SCHEMA)
           to_schema = SeOpenData::CSV::Schemas::Latest;
           col_sep = config.fetch('ORIGINAL_CSV_COL_SEP', ';')
           converter = mk_converter(from_schema: from_schema, to_schema: to_schema,
+                                   geocode: geocode,
                                    input_csv_opts: {col_sep: col_sep,
                                                     skip_blanks: true})
           
           # Transforms the rows from Co-ops UK schema to our standard
           # Note the BOM and encoding flags, which avoid a MalformedCSVError
-          converter.convert File.open(original_csv, "r:bom|utf-8"), initial_pass
-          add_postcode_lat_long(infile: initial_pass, outfile: output_csv,
-                                api_key: api_key, lat_lng_cache: config.POSTCODE_LAT_LNG_CACHE,
-                                postcode_global_cache: config.GEODATA_CACHE,
-                                to_schema: to_schema)
+          converter.convert File.open(original_csv, "r:bom|utf-8"), output_csv
+          
         rescue => e
           raise "error transforming #{original_csv} into #{output_csv}: #{e.message}"
         end
@@ -225,73 +252,6 @@ module SeOpenData
             .delete("@#/")
         end
 
-        # Fill out the geocoding fields in a CSV
-        #
-        # Assumes the input and output CSV uses the schema
-        # `to_schema`. Reads the address from the input fields with id
-        # `:street_address`, `:locality`, `:region` and `:postcode`.
-        # Writes the latitude and longitude to the output fields
-        # `:geocontainer_lat` and `:geocontainer_lon` Also writes a
-        # geolocation URL into `:geocontainer`.
-        #
-        # If postcode_global_cache is undefined, only postcode lookup
-        # is done.
-        #
-        # If the api_key and postcode_global_cache parameters are set,
-        # then if the postcode is not present or not a valid UK
-        # postcode, it will attempt a global geocoding of the address.
-        #
-        # @param infile A file path to read from
-        # @param outfile A file path to write to
-        # @param api_key An API key to use for the global geocoder, optional if
-        # postcode_global_cache not set
-        # @param lat_lng_cache The path to a JSON file into which to cache postcode geolocations
-        # @param postcode_global_cache The path to JSON file into which to cache global
-        # address geolocations
-        # @param to_schema An SeOpenData::CSV::Schema instance defining the output schema
-        def self.add_postcode_lat_long(infile:, outfile:, api_key: nil, lat_lng_cache:,
-                                       postcode_global_cache: nil, to_schema: )
-          input = File.open(infile, "r:bom|utf-8")
-          output = File.open(outfile, "w")
-
-          geocoder = nil
-          geocoder_headers = nil
-          if postcode_global_cache
-            # Geoapify API key required
-            geocoder = SeOpenData::CSV::Standard::GeoapifyStandard::Geocoder.new(api_key)
-            geocoder_headers = SeOpenData::CSV::Standard::GeoapifyStandard::Headers
-          end
-          
-          headers = to_schema.to_h
-          SeOpenData::CSV._add_postcode_lat_long(
-            input,
-            output,
-            headers[:postcode],
-            headers[:country_name],
-            subhash(headers,
-                    :geocontainer,
-                    :geocontainer_lat,
-                    :geocontainer_lon),
-            lat_lng_cache,
-            {},
-            postcode_global_cache,
-            subhash(headers,
-                    :street_address,
-                    :locality,
-                    :region,
-                    :postcode),
-            false,
-            geocoder_headers,
-            geocoder,
-            true
-          )
-        ensure
-          input.close
-          output.close
-        end
-
-
-        
         # Given equal sized arrays of values and labels, create a concatenated list of labels
         #
         # For each value of `val_ary` which equals a value in
