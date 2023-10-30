@@ -6,16 +6,18 @@ require "csv"
 
 Minitest::Test::make_my_diffs_pretty!
 
-DataDir = __dir__+"/data"
+module Data
+  Dir = __dir__+"/data"
 
-def read_data(file)
-  CSV.read(DataDir+"/"+file, headers: true).to_a.transpose
-end
+  def self.read(file)
+    CSV.read(Dir+"/"+file, headers: true).to_a.transpose
+  end
 
-def write_data(file, *rows)
-  CSV.open(DataDir+"/"+file, 'w') do |csv|
-    rows.transpose.each do |row|
-      csv << row
+  def self.write(file, *rows)
+    CSV.open(Dir+"/"+file, 'w') do |csv|
+      rows.transpose.each do |row|
+        csv << row
+      end
     end
   end
 end
@@ -30,7 +32,7 @@ describe SeOpenData::CSV::Schema::Types do
 
     # The data file should have a column with the URLs to test, and a
     # second with the expected normalised urls.
-    urls, expected = read_data "urls.csv"
+    urls, expected = Data.read "urls.csv"
 
     it "normalise_url should normalise these URLs consistently" do
       normalised = urls.collect do |row|
@@ -41,7 +43,7 @@ describe SeOpenData::CSV::Schema::Types do
       # current algorithm, but remember to set it back, and check the
       # normalisation is correct manually before committing it for
       # future use!
-      write_data "urls.csv", urls, normalised if false
+      Data.write "urls.csv", urls, normalised if false
       value(normalised).must_equal expected
     end
   end
@@ -50,7 +52,7 @@ describe SeOpenData::CSV::Schema::Types do
 
     # The data file should have a column with the URLs to test, and a
     # second with the expected normalised urls.
-    urls, expected = read_data "facebooks.csv"
+    urls, expected = Data.read "facebooks.csv"
 
     it "normalise_facebook should normalise these URLs consistently" do
       normalised = urls.collect do |row|
@@ -61,7 +63,7 @@ describe SeOpenData::CSV::Schema::Types do
       # current algorithm, but remember to set it back, and check the
       # normalisation is correct manually before committing it for
       # future use!
-      write_data "facebooks.csv", urls, normalised if false
+      Data.write "facebooks.csv", urls, normalised if false
       value(normalised).must_equal expected
     end
     
@@ -72,7 +74,7 @@ describe SeOpenData::CSV::Schema::Types do
 
     # The data file should have a column with the URLs to test, and a
     # second with the expected normalised urls.
-    urls, expected = read_data "twitter.csv"
+    urls, expected = Data.read "twitter.csv"
 
     it "normalise_twitter should normalise these URLs consistently" do
       normalised = urls.collect do |row|
@@ -83,7 +85,7 @@ describe SeOpenData::CSV::Schema::Types do
       # current algorithm, but remember to set it back, and check the
       # normalisation is correct manually before committing it for
       # future use!
-      write_data "twitter.csv", urls, normalised if false
+      Data.write "twitter.csv", urls, normalised if false
       value(normalised).must_equal expected
     end
   end
