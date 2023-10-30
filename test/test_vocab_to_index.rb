@@ -7,25 +7,26 @@ require 'linkeddata'
 
 Minitest::Test::make_my_diffs_pretty!
 
-DataDir = __dir__+"/data"
-
 def read_ttl(filestem)
+  data_dir = __dir__+"/data"
   v2i = nil
-  RDF::Reader.open(DataDir + '/' + filestem + '.ttl') do |reader|
+  RDF::Reader.open(data_dir + '/' + filestem + '.ttl') do |reader|
     v2i = SeOpenData::VocabToIndex.new(reader.to_enum)
   end
   v2i
 end
 
-empty_vocab_index = {
-  prefixes: {},
-  meta: {
-    vocab_srcs: [],
-    languages: [],
-    queries: [],
-  },
-  vocabs: {},
-}
+def empty_vocab_index(languages = [])
+  {
+    prefixes: {},
+    meta: {
+      vocab_srcs: [],
+      languages: languages,
+      queries: [],
+    },
+    vocabs: {},
+  }
+end
 
 describe SeOpenData::VocabToIndex do
   
@@ -34,12 +35,12 @@ describe SeOpenData::VocabToIndex do
 
     it "an empty config should result in an empty index" do
       result = v2j.aggregate({
-                               languages: [],
+                               languages: [], # empty means "whatever you got"
                                vocabularies: [],
                              })
       #puts JSON.pretty_generate(result)
       #puts result.inspect
-      value(result).must_equal(empty_vocab_index)
+      value(result).must_equal(empty_vocab_index([:EN, :ES, :FR, :KO, :PT]))
     end
 
 
@@ -238,12 +239,12 @@ describe SeOpenData::VocabToIndex do
 
     it "an empty config should result in an empty index" do
       result = v2j.aggregate({
-                               languages: [],
+                               languages: [], # empty means "whatever you got"
                                vocabularies: [],
                              })
       #puts JSON.pretty_generate(result)
       #puts result.inspect
-      value(result).must_equal(empty_vocab_index)
+      value(result).must_equal(empty_vocab_index([:EN, :ES, :FR, :KO, :PT]))
     end
 
 
