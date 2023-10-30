@@ -17,15 +17,17 @@ def read_ttl(filestem)
   v2i
 end
 
-empty_vocab_index = {
-  prefixes: {},
-  meta: {
-    vocab_srcs: [],
-    languages: [],
-    queries: [],
-  },
-  vocabs: {},
-}
+def empty_vocab_index(languages = [])
+  {
+    prefixes: {},
+    meta: {
+      vocab_srcs: [],
+      languages: languages,
+      queries: [],
+    },
+    vocabs: {},
+  }
+end
 
 describe SeOpenData::VocabToIndex do
   
@@ -34,12 +36,12 @@ describe SeOpenData::VocabToIndex do
 
     it "an empty config should result in an empty index" do
       result = v2j.aggregate({
-                               languages: [],
+                               languages: [], # empty means "whatever you got"
                                vocabularies: [],
                              })
       #puts JSON.pretty_generate(result)
       #puts result.inspect
-      value(result).must_equal(empty_vocab_index)
+      value(result).must_equal(empty_vocab_index([:EN, :ES, :FR, :KO, :PT]))
     end
 
 
@@ -238,12 +240,12 @@ describe SeOpenData::VocabToIndex do
 
     it "an empty config should result in an empty index" do
       result = v2j.aggregate({
-                               languages: [],
+                               languages: [], # empty means "whatever you got"
                                vocabularies: [],
                              })
       #puts JSON.pretty_generate(result)
       #puts result.inspect
-      value(result).must_equal(empty_vocab_index)
+      value(result).must_equal(empty_vocab_index([:EN, :ES, :FR, :KO, :PT]))
     end
 
 
