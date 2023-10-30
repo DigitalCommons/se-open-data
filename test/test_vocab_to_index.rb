@@ -7,11 +7,10 @@ require 'linkeddata'
 
 Minitest::Test::make_my_diffs_pretty!
 
-DataDir = __dir__+"/data"
-
 def read_ttl(filestem)
+  data_dir = __dir__+"/data"
   v2i = nil
-  RDF::Reader.open(DataDir + '/' + filestem + '.ttl') do |reader|
+  RDF::Reader.open(data_dir + '/' + filestem + '.ttl') do |reader|
     v2i = SeOpenData::VocabToIndex.new(reader.to_enum)
   end
   v2i
