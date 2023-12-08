@@ -2,19 +2,19 @@
 # frozen_string_literal: true
 Gem::Specification.new do |s|
   s.name        = 'se_open_data'
-  s.version     = '1.0.0'
+  s.version     = '2.2.0'
   s.licenses    = ['GPL-3.0-or-later']
-  s.summary     = "Solidarity Economy Open Data transforms"
+  s.summary     = "Digital Commons Co-operative Open Data transforms"
   s.description = <<-HERE
     This is a collection of Ruby classes for transforming 3rd party data into 
     a uniform schema and thence into RDF linked open data.
   HERE
-  s.authors     = ["Solidarity Economy Association"]
-  s.email       = 'tech.accounts@solidarityeconomy.coop'
+  s.authors     = ["Digital Commons Co-operative"]
+  s.email       = 'tech.accounts@digitalcommons.coop'
   s.files       =  Dir['lib/**/*.rb'] + Dir['bin/**'] + Dir['resources/**']
   s.executables.concat %w(seod export-lime-survey)
-  s.homepage    = 'https://github.com/SolidarityEconomyAssociation/se-open-data'
-  s.metadata    = { "source_code_uri" => "https://github.com/SolidarityEconomyAssociation/se-open-data" }
+  s.homepage    = 'https://github.com/DigitalCommons/se-open-data'
+  s.metadata    = { "source_code_uri" => "https://github.com/DigitalCommons/se-open-data" }
 
   s.add_runtime_dependency('httparty')
   s.add_runtime_dependency('i18n')
