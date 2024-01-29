@@ -361,18 +361,105 @@ module SeOpenData
           out_data.close
         end
 
-        # Performs schema validation and tries to facilitate simple
-        # mapping of row fields, using the {#block} provided to the
-        # constructor (See {.new}.)
+        # Converts a CSV input file with data in one schema into a CSV
+        # output file with another.
         #
         # The input stream is opened as a CSV stream, using
-        # {#input_csv_opts}, likewise the output stream using
-        # {#output_csv_opts}.
+        # {#input_csv_opts}.
         #
         # Headers (assumed present) are read from the input stream
         # first, validated according to {#from_schema}, and used to
         # create a field mapping for the ordering in this file (which
         # is not assumed to match the schema's).
+        #
+        # The resulting stream and the output parameter are then
+        # passed to #enum_convert.
+        #
+        # @param input [String, IO] the file path or stream to read from
+        # @param output [String, IO] the file path or stream to write to        
+        def each_row(input, output) # FIXME test
+
+          stream(input, output) do |inputs, outputs|
+            index = 0
+            csv_in = ::CSV.new(inputs, **@input_csv_opts)
+            csv_out = ::CSV.new(outputs, **@output_csv_opts)
+
+            # Read the input headers, and validate them
+            headers = csv_in.shift
+            field_map = @from_schema.validate_headers(headers) # This may throw
+
+            # Write the output headers
+            csv_out << @to_schema.field_headers
+            
+            # The transform block expects ID->value hashes, Therefore,
+            # add in a step to transform CSV rows (arrays) into those
+            # (with some validation), and track the element count in
+            # case of an error.
+            enum_in = Enumerator::Lazy.new(csv_in) do |yielder, row|
+              index += 1
+              # This may throw if validation fails
+              id_hash = @from_schema.id_hash(row, field_map)
+              yielder << id_hash
+            end
+            
+            transform(enum_in, csv_out, &block)
+
+            return
+          rescue => e
+            raise ArgumentError, "error when converting element #{index} of data, exected to have schema :#{@from_schema.id}, to schema :#{@to_schema.id} : #{e.message}"
+          end
+        end
+
+        # Converts a JSON input file with data in one schema into a CSV
+        # output file with another.
+        #
+        # The data of interest is assumed to be in an array, possibly
+        # nested inside other elements, as defined by data_path, which
+        # names the nested elements to traverse (as per the Hash#dig
+        # and Array#dig methods). If this parameter is an empty array,
+        # the top-level data item is used.
+        #
+        # This array and the output parameter is then passed to
+        # #enum_convert
+        def json_convert(input, data_path, output)
+          json = if input.is_a? String
+                   IO.read(input)
+                 else
+                   input.read
+                 end
+          
+          data = JSON.parse(json)
+
+          if data_path.size > 0
+            # Check it's a dig-able object 
+            unless data.respond_to? :dig
+              raise "Top level JSON element should be an object or an array, in #{json_file}"
+            end
+            
+            data = data.dig(*data_path)
+          end
+
+          enum_convert(data, output)
+        end
+
+        # Converts an enumeration with data in one schema into a CSV
+        # output file with another.
+        # 
+        # The schemas are defined by in_schema and out_schema. A
+        # transform is performed on the items using the transformer
+        # block supplied to the constructor.
+        #
+        # Performs schema validation and tries to facilitate simple
+        # mapping of row fields, using the {#block} provided to the
+        # constructor (See {.new}.)
+        #
+        # The output stream is opened as a CSV stream using
+        # {#output_csv_opts}.
+        #
+        # Headers of all items in the input data list are validated
+        # validated according to {#from_schema}, and used to create a
+        # field mapping for the ordering in this file (which is not
+        # assumed to match the schema's).
         #
         # Output headers are then written to the output stream (in the
         # order defined by {#to_schema}).
@@ -380,87 +467,135 @@ module SeOpenData
         # Then each row is parsed and transformed using {#block}, then
         # the result written to the output CSV stream.
         #
-        # @param input [String, IO] the file path or stream to read from
+        # @param enum_in [Enumerator] an enumerable object containing Hashes with the expected form
         # @param output [String, IO] the file path or stream to write to        
-        def each_row(input, output)
-          index = 0
-          stream(input, output) do |inputs, outputs|
-            csv_in = ::CSV.new(inputs, **@input_csv_opts)
-            csv_out = ::CSV.new(outputs, **@output_csv_opts)
-            
-            # Read the input headers, and validate them
-            headers = csv_in.shift
-            field_map = @from_schema.validate_headers(headers) # This may throw
-
-            # Auto-vivifying hash recording primary keys seen
-            pk_seen = Hash.new do |hash,key|
-              hash[key] = Hash.new(&hash.default_proc)
-            end
-            
-            # Write the output headers
-            csv_out << @to_schema.field_headers
-            
-            csv_in.each do |row|
-              index += 1
-              
-              # This may throw if validation fails
-              id_hash = @from_schema.id_hash(row, field_map)
-
-              new_id_hashes =
-                begin
-                  block_given? ? yield(**id_hash) : @block.call(**id_hash)
-                rescue ArgumentError => e
-                  # Try to reword the error helpfully from:
-                  match = e.message.match(/(missing|unknown) keywords?: (.*)/)
-                  if match
-                    if match[1] == 'unknown'
-                      # missing keywords
-                      raise ArgumentError,
-                            "block must consume remaining keyword parameters for these "+
-                            "'#{@from_schema.id}' CSV schema field ids: #{match[2]}"
-                    elsif match[1] == 'missing'
-                      # unknown keywords
-                      raise ArgumentError,
-                            "block keyword parameters do not match '#{@from_schema.id}'"+
-                            " CSV schema field ids: #{match[2]}"
-                    end
-                  else
-                    raise
-                  end
-                end
-
-              # Normalise to an iterable:
-              if new_id_hashes.nil?
-                new_id_hashes = []
-              elsif new_id_hashes.is_a? Hash
-                new_id_hashes = [new_id_hashes]
-              end
-
-              new_id_hashes.each do |new_id_hash|
-                unless @to_schema.primary_key.to_a.empty?
-                  pk = new_id_hash.fetch_values(*@to_schema.primary_key)
-                  pk_count = pk.compact.size
-                  expected_pk_count = @to_schema.primary_key.size
-                  warn "invalid primary key value #{pk}"if pk_count != expected_pk_count
-
-                  warn "duplicate primary key value #{pk}" unless pk_seen.dig(*pk).empty?
-                
-                  # Mark this primary key as seen
-                  pk_seen.dig(*pk, true)
-                end
-                
-                # this may throw
-                csv_out << @to_schema.row(new_id_hash)
-              end
-            rescue => e
-              raise RuntimeError, "#{e.message}\nwhilst parsing row data:\n#{'%.160s' % row.to_csv}"
-            end
+        def enum_convert(enum_in, output) 
+          # Validate we can use the data as we expect to
+          if not enum_in.respond_to? :each
+            raise "Incoming JSON elements should be contained in an Enumerable, not #{enum_in.class}"
           end
-        rescue => e
-          raise ArgumentError, "error when converting row #{index} of CSV data, exected to have schema :#{@from_schema.id}, to schema :#{@to_schema.id} : #{e.message}"
+
+          # Open the output CSV stream
+          ::CSV.open(output, 'w',
+                     headers: @to_schema.field_headers,
+                     write_headers: true) do |csv_out|
+
+            # Pre-process the items in list using this block
+            pp_enum_in = Enumerator::Lazy.new(enum_in) do |yielder, item|
+              # Check it's a hash
+              unless item.is_a? Hash
+                raise "Incoming JSON elements must be objects not #{org.class}, in #{json_file}"
+              end
+
+              field_map = @from_schema.validate_headers(item.keys) # This may throw
+              id_hash = @from_schema.id_hash(item.values, field_map)
+
+              # id_hash has now got the schema the transform method expects
+              # (i.e. the normalised schema defined by @from_schema)
+              yielder << id_hash
+            end
+
+            # Send the data, prepropressed through the above block,
+            # through the transformer
+            transform(pp_enum_in, csv_out)
+          end
         end
 
+        
+        # Iterates over an enumerable enum_in, expecting ID->value hash elements
+        #
+        # Calls block on each hash, with the hash as named parameters. Expects the
+        # return value to be:
+        #
+        # - another hash, which is the transformed result,
+        # - an array of transformed hashes, if the result corresponds to multiple elements
+        # - nil, if there should be no data inserted into enum_out for this element.
+        #
+        # An exception may be raised by the block if there was an
+        # error. In particular, if Ruby detects that the block is
+        # passed an incomplete set of parameters at runtime, it will
+        # raise an exception. This method attempts to catch these
+        # errors and re-raise them with more helpful diagnostics
+        # containing some context.
+        #
+        # The output hashes are validated. If the @to_schema includes
+        # a primary key, the appropriate fields must be defined and
+        # unique. They are cumulatively indexed to check there are no
+        # duplicates. When an invalid or duplicate is found, a warning
+        # is emitted on standard error, and that element is skipped.
+        #
+        # Also, all the fields defined by @to_schema must exist, or
+        # likewise a warning is emitted and that element is skipped.
+        #
+        # Otherwise, each hash returned by the transformer block is
+        # transformed into an array using to @to_schema#row, and that
+        # is added into enum_out using the << operator.
+        def transform(enum_in, enum_out, &transformer)
+          # Auto-vivifying hash recording primary keys seen
+          pk_seen = Hash.new do |hash,key|
+            hash[key] = Hash.new(&hash.default_proc)
+          end
+
+          # Default to using the built-in block
+          transformer ||= @block
+
+          enum_in.each do |id_hash|
+            new_id_hashes =
+              begin
+                transformer.call(**id_hash)
+              rescue ArgumentError => e
+                # Try to reword the error helpfully from:
+                match = e.message.match(/(missing|unknown) keywords?: (.*)/)
+                if match
+                  if match[1] == 'unknown'
+                    # missing keywords
+                    raise ArgumentError,
+                          "block must consume remaining keyword parameters for these "+
+                          "'#{@from_schema.id}' schema field ids: #{match[2]}"
+                  elsif match[1] == 'missing'
+                    # unknown keywords
+                    raise ArgumentError,
+                          "block keyword parameters do not match '#{@from_schema.id}'"+
+                          " schema field ids: #{match[2]}"
+                  end
+                else
+                  raise
+                end
+              end
+            
+            # Normalise the resulting record or records to an iterable:
+            if new_id_hashes.nil?
+              new_id_hashes = []
+            elsif new_id_hashes.is_a? Hash
+              new_id_hashes = [new_id_hashes]
+            end
+
+            new_id_hashes.each do |new_id_hash|
+              # this may throw
+              row = @to_schema.row(new_id_hash)
+
+              # validate any primary key fields
+              unless @to_schema.primary_key.to_a.empty?
+                pk = new_id_hash.fetch_values(*@to_schema.primary_key)
+                pk_count = pk.compact.size
+                expected_pk_count = @to_schema.primary_key.size
+                warn "invalid primary key value #{pk}"if pk_count != expected_pk_count
+
+                warn "duplicate primary key value #{pk}" unless pk_seen.dig(*pk).empty?
+                
+                # Mark this primary key as seen
+                pk_seen.dig(*pk, true)
+              end
+              
+              enum_out << row
+            end
+          rescue => e
+            raise RuntimeError, "#{e.message}\nwhilst parsing row data:\n#{'%.160s' % id_hash}"
+          end
+        end
+        
         alias convert each_row
+        alias csv_convert each_row
       end
     end
   end
