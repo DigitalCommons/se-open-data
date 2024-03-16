@@ -250,6 +250,7 @@ module SeOpenData
       def self.converter(from_schema:, to_schema:,
                          input_csv_opts: DEFAULT_INPUT_CSV_OPTS,
                          output_csv_opts: DEFAULT_OUTPUT_CSV_OPTS,
+                         **other_opts,
                          &block)
 
         return Converter.new(
@@ -257,6 +258,7 @@ module SeOpenData
           to_schema: to_schema,
           input_csv_opts: input_csv_opts,
           output_csv_opts: output_csv_opts,
+          **other_opts,
           &block)
       end
 
@@ -301,7 +303,7 @@ module SeOpenData
       # validation and tries to facilitate simple mapping of row
       # fields, using the block provided to the constructor.
       class Converter
-        attr_reader :from_schema, :to_schema, :block
+        attr_reader :from_schema, :to_schema, :block, :opts
 
         # Constructs an instance designed for use with the given input
         # and output CSV schemas.
@@ -329,16 +331,33 @@ module SeOpenData
         # @param input_csv_opts [Hash] options to pass to the input {::CSV} stream's constructor
         # @param output_csv_opts [Hash] options to pass to the output {::CSV} stream's constructor
         # @param block a block which transforms rows, as described.
+        # @param reject_duplicate_pks - can be true (drop and warn), false
+        # (just warn), or 'error' (raise an error). Defaults to false.
+        # @param reject_invalid_pks - can be true (drop and warn), false
+        # (just warn), or 'error' (raise an error). Defaults to false.
         def initialize(from_schema:,
                        to_schema:,
                        input_csv_opts: {},
                        output_csv_opts: {},
+                       reject_duplicate_pks: false,
+                       reject_invalid_pks: false,
                        &block)
           @from_schema = from_schema
           @to_schema = to_schema
           @input_csv_opts = input_csv_opts
           @output_csv_opts = output_csv_opts
-          @block = block
+          @block = block          
+          @opts = {
+            reject_invalid_pks: reject_invalid_pks,
+            reject_duplicate_pks: reject_duplicate_pks,
+          }
+          # Validate @opts
+          @opts.keys.each do |key|
+            case @opts[key]
+            when true, false, 'error' # no op
+            else raise "invalid value for parameter '#{key}': #{@opts[key].inspect}"
+            end
+          end
         end
 
         # Accepts file paths or streams, but calls the block with streams.
@@ -579,9 +598,14 @@ module SeOpenData
                 pk = new_id_hash.fetch_values(*@to_schema.primary_key)
                 pk_count = pk.compact.size
                 expected_pk_count = @to_schema.primary_key.size
-                warn "invalid primary key value #{pk}"if pk_count != expected_pk_count
 
-                warn "duplicate primary key value #{pk}" unless pk_seen.dig(*pk).empty?
+                if pk_count != expected_pk_count
+                  next if reject? "invalid primary key value #{pk}", @opts[:reject_invalid_pks]
+                end
+
+                unless pk_seen.dig(*pk).empty?
+                  next if reject? "duplicate primary key value #{pk}", @opts[:reject_duplicate_pks] 
+                end
                 
                 # Mark this primary key as seen
                 pk_seen.dig(*pk, true)
@@ -592,6 +616,23 @@ module SeOpenData
           rescue => e
             raise RuntimeError, "#{e.message}\nwhilst parsing row data:\n#{'%.160s' % id_hash}"
           end
+        end
+
+        # Checks what behaviour to take from opt, and returns true or false to indicate
+        # whether the row should be rejected; or raises an exception if it should be an error
+        def reject?(msg, opt)
+          case opt
+          when true
+            warn msg + " - dropping row"
+          when false
+            warn msg + " - keeping row"
+          when 'error'
+            raise msg
+          else
+            raise "invalid reject option: #{opt}"
+          end
+
+          opt
         end
         
         alias convert each_row
