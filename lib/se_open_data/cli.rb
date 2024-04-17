@@ -474,7 +474,6 @@ module SeOpenData
         ensure_present: config.DEPLOYMENT_WEBROOT,
         owner: config.DEPLOYMENT_WEB_USER,
         group: config.DEPLOYMENT_WEB_GROUP,
-        verbose: true,
       )
       return true
     end
