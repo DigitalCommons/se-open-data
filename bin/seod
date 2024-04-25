@@ -22,9 +22,11 @@ Where <command> can be:
 - convert
 - generate
 - generate_vocab_index
+- generate_rdf
 - deploy
 - triplestore
 - run_all
+- limesurvey_export
 - clean
 - help
 
