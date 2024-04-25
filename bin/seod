@@ -21,6 +21,7 @@ Where <command> can be:
 - download
 - convert
 - generate
+- generate_vocab_index
 - deploy
 - triplestore
 - run_all
