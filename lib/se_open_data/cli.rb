@@ -44,7 +44,7 @@ module SeOpenData
     #
     # @return true if all steps succed, false if any fail.
     def self.command_run_all
-      %w(download convert generate deploy create_w3id triplestore).each do |name|
+      %w(download convert generate deploy triplestore).each do |name|
         Log.info "Running command #{name}"
         rc = send "command_#{name}".to_sym
         if rc != true && rc != 0
@@ -472,84 +472,6 @@ module SeOpenData
         to_dir: config.DEPLOYMENT_DOC_DIR,
         from_dir: config.GEN_DOC_DIR,
         ensure_present: config.DEPLOYMENT_WEBROOT,
-        owner: config.DEPLOYMENT_WEB_USER,
-        group: config.DEPLOYMENT_WEB_GROUP,
-      )
-      return true
-    end
-
-    # This inserts an .htaccess file on the w3id.solidarityeconomy.coop website
-    # (strictly, on the server config.DEPLOYMENT_SERVER at config.W3ID_REMOTE_LOCATION)
-    def self.command_create_w3id
-      config = load_config
-
-      if !config.respond_to? :W3ID_REMOTE_LOCATION
-        Log.info "No W3ID_REMOTE_LOCATION configured, skipping"
-        return true
-      end
-      
-      # Create w3id config
-      redir = config.REDIRECT_W3ID_TO
-
-      htaccess = <<-HERE
-# Turn off MultiViews
-Options -MultiViews +FollowSymLinks
-
-# Directive to ensure *.rdf files served as appropriate content type,
-# if not present in main apache config
-AddType application/rdf+xml .rdf
-
-# Rewrite engine setup
-RewriteEngine On
-
-# Redirect sparql queries for this dataset.
-# store1 is where the Virtuoso triplestore is served.
-# This is close, but does not work from curl as expected... e.g. with this:
-#bombyx:~/SEA/open-data-and-maps/data/dotcoop/domains2018-04-24$ curl -i -L -H \"Accept: application/json\"  --data-urlencode query@generated-data/experimental/sparql/query.rq http://w3id.solidarityeconomy.coop/ica-youth-network/sparql
-#RewriteRule ^(sparql)$ http://store1.solidarityeconomy.coop:8890/$1?default-graph-uri=https://w3id.solidarityeconomy.coop/ica-youth-network/ [QSA,R=303,L]
-
-# Redirect https://w3id.org/dotcoop to the appropriate index,
-# content negotiation depending on the HTTP Accept header:
-RewriteCond %{HTTP_ACCEPT} !application/rdf\+xml.*(text/html|application/xhtml\+xml)
-RewriteCond %{HTTP_ACCEPT} text/html [OR]
-RewriteCond %{HTTP_ACCEPT} application/xhtml\+xml [OR]
-RewriteCond %{HTTP_USER_AGENT} ^Mozilla/.*
-RewriteRule ^$ #{redir}index.html [R=303,L]
-
-RewriteCond %{HTTP_ACCEPT} application/rdf\+xml
-RewriteRule ^$ #{redir}index.rdf [R=303,L]
-
-RewriteCond %{HTTP_ACCEPT} text/turtle
-RewriteRule ^$ #{redir}index.ttl [R=303,L]
-
-# Redirect https://w3id.org/ica-youth-network/X to the appropriate file on data1.solidarityeconomy.coop
-# In this case, X will refer to a specific Coop.
-# Content negotiation depending on the HTTP Accept header:
-RewriteCond %{HTTP_ACCEPT} !application/rdf\+xml.*(text/html|application/xhtml\+xml)
-RewriteCond %{HTTP_ACCEPT} text/html [OR]
-RewriteCond %{HTTP_ACCEPT} application/xhtml\+xml [OR]
-RewriteCond %{HTTP_USER_AGENT} ^Mozilla/.*
-RewriteRule ^(.*)$ #{redir}$1.html [R=303,L]
-
-RewriteCond %{HTTP_ACCEPT} application/rdf\+xml
-RewriteRule ^(.*)$ #{redir}$1.rdf [R=303,L]
-
-RewriteCond %{HTTP_ACCEPT} text/turtle
-RewriteRule ^(.*)$ #{redir}$1.ttl [R=303,L]
-
-# Default rule. Apparently, some older Linked Data applications assume this default (sigh):
-RewriteRule ^(.*)$ #{redir}$1.rdf [R=303,L]
-HERE
-
-      Log.info "creating htaccess file.."
-      IO.write(config.HTACCESS, htaccess)
-      to_serv = config.respond_to?(:DEPLOYMENT_SERVER) ? config.DEPLOYMENT_SERVER : nil
-
-      deploy(
-        to_server: to_serv,
-        to_dir: File.join(config.W3ID_REMOTE_LOCATION, config.URI_PATH_PREFIX),
-        from_dir: config.W3ID_LOCAL_DIR,
-        ensure_present: config.W3ID_REMOTE_LOCATION,
         owner: config.DEPLOYMENT_WEB_USER,
         group: config.DEPLOYMENT_WEB_GROUP,
       )

@@ -139,15 +139,6 @@ module SeOpenData
       @map["VIRTUOSO_SCRIPT_LOCAL"] = join @map["GEN_VIRTUOSO_DIR"], @map["VIRTUOSO_SQL_SCRIPT"]
       @map["VIRTUOSO_SCRIPT_REMOTE"] = unixjoin @map["VIRTUOSO_DATA_DIR"], @map["VIRTUOSO_SQL_SCRIPT"]
 
-      # Used to define w3ids
-      if @map.has_key? "W3ID_REMOTE_LOCATION"
-        @map["W3ID_LOCAL_DIR"] = join @map["TOP_OUTPUT_DIR"], "w3id", ""
-        @map["HTACCESS"] = join @map["W3ID_LOCAL_DIR"], ".htaccess"
-        @map["REDIRECT_W3ID_TO"] = @map["URI_SCHEME"] + "://" + unixjoin(@map["SERVER_ALIAS"], @map["URI_PATH_PREFIX"])
-        # Make sure this dir exists
-        FileUtils.mkdir_p @map["W3ID_LOCAL_DIR"]
-      end
-      
       # Preserve booleans in these cases
       %w(AUTO_LOAD_TRIPLETS USE_ENV_PASSWORDS USING_ICA_ACTIVITIES).each do |key|
         @map[key] = @map.key?(key) && @map[key].to_s.downcase == "true"

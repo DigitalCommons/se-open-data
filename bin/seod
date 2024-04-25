@@ -22,7 +22,6 @@ Where <command> can be:
 - convert
 - generate
 - deploy
-- create_w3id
 - triplestore
 - run_all
 - clean

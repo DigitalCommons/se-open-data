@@ -28,6 +28,5 @@ STANDARD_CSV=standard.csv
 AUTO_LOAD_TRIPLETS=true
 CSS_SRC_DIR=css/
 VIRTUOSO_PASS_FILE=deployments/dev-0.solidarityeconomy.coop/virtuoso/dba.password
-W3ID_REMOTE_LOCATION=/var/www/html/w3id.org/
 SERVER_ALIAS=data1.solidarityeconomy.coop
 TEST_INITIATIVE_IDENTIFIERS=16 40

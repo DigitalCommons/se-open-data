@@ -60,7 +60,6 @@ describe SeOpenData::Config do
       "VIRTUOSO_ROOT_DATA_DIR" => "/home/admin/Virtuoso/BulkLoading/Data/",
       "SPARQL_ENDPOINT" => "http://store1.solidarityeconomy.coop:8890/sparql",
       "VIRTUOSO_PASS_FILE" => "deployments/dev-0.solidarityeconomy.coop/virtuoso/dba.password",
-      "W3ID_REMOTE_LOCATION" => "/var/www/html/w3id.org/",
       "SERVER_ALIAS" => "data1.solidarityeconomy.coop",
       "GEN_CSV_DIR" => caller_dir + "/generated-data/csv/",
       "WWW_DIR" => caller_dir + "/generated-data/www/",
@@ -84,9 +83,6 @@ describe SeOpenData::Config do
       "VIRTUOSO_DATA_DIR" => "/home/admin/Virtuoso/BulkLoading/Data/2020526214656/",
       "VIRTUOSO_SCRIPT_LOCAL" => caller_dir + "/generated-data/virtuoso/loaddata.sql",
       "VIRTUOSO_SCRIPT_REMOTE" => "/home/admin/Virtuoso/BulkLoading/Data/2020526214656/loaddata.sql",
-      "W3ID_LOCAL_DIR" => caller_dir + "/generated-data/w3id/",
-      "HTACCESS" => caller_dir + "/generated-data/w3id/.htaccess",
-      "REDIRECT_W3ID_TO" => "https://data1.solidarityeconomy.coop/ica-youth-network",
     }
     it "should generate an expected map" do
       value(config_map).must_equal expected_map
@@ -97,7 +93,6 @@ describe SeOpenData::Config do
 /csv
 /sparql
 /virtuoso
-/w3id
 /www
 /www/doc
 /www/doc/css
@@ -159,7 +154,6 @@ HERE
       "VIRTUOSO_ROOT_DATA_DIR" => "/home/admin/Virtuoso/BulkLoading/Data/",
       "SPARQL_ENDPOINT" => "http://store1.solidarityeconomy.coop:8890/sparql",
       "VIRTUOSO_PASS_FILE" => "deployments/dev-0.solidarityeconomy.coop/virtuoso/dba.password",
-      "W3ID_REMOTE_LOCATION" => "/var/www/html/w3id.org/",
       "SERVER_ALIAS" => "data1.solidarityeconomy.coop",
       "TEST_INITIATIVE_IDENTIFIERS" => "16 40",
       "GEN_CSV_DIR" => caller_dir+"/generated-data/csv/",
@@ -184,9 +178,6 @@ HERE
       "VIRTUOSO_DATA_DIR" => "/home/admin/Virtuoso/BulkLoading/Data/2020526214656/",
       "VIRTUOSO_SCRIPT_LOCAL" => caller_dir+"/generated-data/virtuoso/loaddata.sql",
       "VIRTUOSO_SCRIPT_REMOTE" => "/home/admin/Virtuoso/BulkLoading/Data/2020526214656/loaddata.sql",
-      "W3ID_LOCAL_DIR" => caller_dir+"/generated-data/w3id/",
-      "HTACCESS" => caller_dir+"/generated-data/w3id/.htaccess",
-      "REDIRECT_W3ID_TO" => "https://data1.solidarityeconomy.coop/ica-youth-network"
     }
     
     it "should generate an expected map" do
@@ -198,7 +189,6 @@ HERE
 /csv
 /sparql
 /virtuoso
-/w3id
 /www
 /www/doc
 /www/doc/css
