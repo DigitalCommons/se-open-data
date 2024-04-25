@@ -270,18 +270,7 @@ module SeOpenData
     # script, or that the script determinied there was nothing new to
     # download. This allows unnecessary rebuilds to be avoided.
     def self.command_download
-      downloader_file = File.join(Dir.pwd, "downloader")
-      unless File.exist? downloader_file
-        Log.warn "no 'downloader' file found in current directory, skipping"
-        return 100
-      end
-      unless system downloader_file
-        if $?.exitstatus == 100
-          return 100
-        end
-        raise "'downloader' command in current directory failed"
-      end
-      return true
+      return invoke_script("downloader", allow_codes: 100, allow_absent: true, allow_failure: true)
     end
 
     # Runs the `converter` script in the current directory, if present
@@ -308,14 +297,7 @@ module SeOpenData
     # transform the data from here.
     #
     def self.command_convert
-      converter_file = File.join(Dir.pwd, "converter")
-      unless File.exist? converter_file
-        raise ArgumentError, "no 'converter' file found in current directory"
-      end
-      unless system converter_file
-        raise "'converter' command in current directory failed"
-      end
-      return true
+      return invoke_script("converter")
     end
 
     # Generates the static data in `WWW_DIR` and `GEN_SPARQL_DIR`
@@ -633,6 +615,56 @@ HERE
       response['etag'].to_s.strip
     end
     
+    # Invoke a script.
+    #
+    # Be careful about the file name - sanitise it if it gets computed
+    # or input - or it could be exploited!
+    #
+    # The default behaviour is to run the script, and return true if
+    # it succeeds, and throw an exception if it doesn't exist or
+    # returns a non-zero code (usually indicating failure).
+    #
+    # This can be fine tuned:
+    # - allow_absent: if true, an absent script is not an error, instead nil is returned.
+    # - allow_codes: can be set to one or an array of integer
+    #   values the script should be allowed to return without raising
+    #   an error. The code is returned instead of true.
+    # - allow_failure: if true, failure is indicated by returning false, not raising
+    #   an error.
+    def self.invoke_script(script_with_args,
+                           allow_codes: nil,
+                           allow_absent: false,
+                           allow_failure: false)
+      script_name, *args = script_with_args.split(/\s+/);
+      script_path = File.join(Dir.pwd, script_name)
+      allow_codes = [allow_codes] if allow_codes.is_a? Integer
+
+      if not File.exist? script_path
+        if allow_absent
+          Log.warn "no '#{script_name}' file found in current directory, continuing"
+          return nil
+        else
+          raise "no '#{script_path}' file found in current directory"
+        end
+      end
+      
+      if system script_path, *args
+        return true
+      end
+
+      if allow_codes.is_a? Array
+        if allow_codes.include? $?.exitstatus
+          return $?.exitstatus
+        end
+      end
+
+      if allow_failure
+        return false
+      end
+      
+      raise "'#{script_name}' command in current directory failed"
+    end
+
     private
 
     # generates the autoload command, with the given password
