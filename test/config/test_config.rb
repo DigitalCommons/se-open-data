@@ -95,19 +95,12 @@ describe SeOpenData::Config do
     expected_listing = <<-HERE
 /.
 /csv
-/csv/.
 /sparql
-/sparql/.
 /virtuoso
-/virtuoso/.
 /w3id
-/w3id/.
 /www
-/www/.
 /www/doc
-/www/doc/.
 /www/doc/css
-/www/doc/css/.
 HERE
     
     it "should create the expected directories" do
@@ -203,21 +196,14 @@ HERE
     expected_listing = <<-HERE
 /.
 /csv
-/csv/.
 /sparql
-/sparql/.
 /virtuoso
-/virtuoso/.
 /w3id
-/w3id/.
 /www
-/www/.
 /www/doc
-/www/doc/.
 /www/doc/css
-/www/doc/css/.
 HERE
-    
+
     it "should create the expected directories" do
       value(listing).must_equal expected_listing
     end
