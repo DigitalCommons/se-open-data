@@ -449,9 +449,11 @@ module SeOpenData
       FileUtils.rm_rf config.GEN_SPARQL_DIR
       
 
-      command_generate_vocab_index
-
-      command_generate_rdf      
+      unless invoke_script("generator", allow_absent: true)
+        # Default generate behaviour, if there is no generator script
+        command_generate_vocab_index
+        command_generate_rdf
+      end
 
       # Copy original CSV into upload folder
       standard_csv = File.join(config.GEN_DOC_DIR, 'standard.csv')
