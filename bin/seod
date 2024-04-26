@@ -25,6 +25,7 @@ Where <command> can be:
 - generate_rdf
 - deploy
 - triplestore
+- post_success
 - run_all
 - limesurvey_export
 - clean

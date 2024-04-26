@@ -590,6 +590,24 @@ HERE
       raise e
     end
 
+    # Runs the `post_success` script in the current directory, if present.
+    #
+    # The post_success command is intended to allow arbitrary
+    # post-success operations to be added, such as notifications to
+    # other systems.  It should only be run after successful
+    # completion, and not if any step failed.
+    #
+    # Note, although typically we expect the script to be written in
+    # Ruby and use the SeOpenData library, we don't assume that and
+    # invoke it as a separate process, to allow other languages and
+    # tools to be used.
+    #
+    # @return true on success, false if there was failure, nil to
+    # indicate there is no post_success script.
+    def self.command_post_success
+      invoke_script("post_success", allow_absent: true, allow_failure: true)
+    end
+
     # Gets the content of an URL, following redirects
     #
     # Also sets the 'Accept: application/rdf+xml' header.
