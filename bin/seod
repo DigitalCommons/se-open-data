@@ -29,6 +29,7 @@ Where <command> can be:
 - triplestore
 - post_success
 - run_all
+- murmurations_registration
 - limesurvey_export
 - clean
 - help

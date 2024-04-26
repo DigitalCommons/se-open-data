@@ -667,6 +667,132 @@ HERE
       invoke_script("post_success", allow_absent: true, allow_failure: true)
     end
 
+    # Attempts to register or remove initiatives published in a web
+    # directory with the configured murmurations index server.
+    #
+    # To emphasise: this works with remote data, and should be invoked
+    # after the data has been deployed.
+    #
+    # It assumes that:
+    # - config.DIGEST_INDEX is the name of a digest index file
+    # - hosted on the web in the directory given by the GRAPH_NAME URI,
+    # - the Murmerations profiles are hosted in the same directory
+    # - for every key in the index (which shold be URL-safe), there
+    #   is a profile named "<key>.murm.json"
+    # - the digests in the index represent the content of these profiles,
+    #   in that if the digest changes, the content has changed.
+    # - if the digest is are blank, the file will be unconditionally updated
+    #   (because it will never match a digest)
+    #
+    # The previous state of the profiles is obtained from a cached
+    # digest index stored at a path given by
+    # config.DIGEST_INDEX_CACHE.
+    #
+    # The new digest is downloaded and compared with the cached one.
+    # The differences is used to determine whether to register a
+    # profile if it is new or has changed, or remove a profile if has
+    # gone.
+    #
+    # @return false on outright failure, or an integer value on
+    # (partial) success, indicating the number of failed
+    # registrations/removals. Zero is complete success, and any other
+    # number indicates partial success.
+    def self.command_murmurations_registration
+      require "csv"
+      require "se_open_data/murmurations"
+      require "se_open_data/utils/digest_index"
+      config = load_config
+      
+      index_url = config.fetch('MURMURATIONS_INDEX_URL', 'https://test-index.murmurations.network/v2')
+
+
+      new_digest_index = SeOpenData::Utils::DigestIndex.new
+      new_digest_index_file = config.fetch('DIGEST_INDEX', 'digest.tsv')
+      unless new_digest_index_file
+        Log.error "Digest index location not configured with DIGEST_INDEX, "+
+                  "not registering murmurations profiles"
+        return false
+      end
+
+      # Use a HEAD query to get the actual URL the digest index
+      # resides at.  Starting from here, typically a Permanent URL
+      # which redirects to the actual URL
+      base_publish_url = config.GRAPH_NAME 
+      new_digest_index_url = File.join(base_publish_url, new_digest_index_file)
+      
+      response = head new_digest_index_url # Follows redirects
+
+      resolved_new_digest_index_url = 
+        if response.code == '200'
+          response.uri.to_s
+        else
+          Log.error "failed to load digest index from #{new_digest_index_url}: "+
+                    "#{response.message}"
+          Log.debug "response body: #{response.body}"
+          return false
+        end
+
+      # And from that URL derive the base URL below which we assume
+      # all profiles are published.
+      resolved_base_publish_url = File.dirname(resolved_new_digest_index_url)
+
+      # Now download the digest index and parse it.
+      new_digest_index.parse_str(fetch resolved_new_digest_index_url)
+
+      # Load the old digest index from the local cache - if present
+      old_digest_index_file = config.DIGEST_INDEX_CACHE
+      old_digest_index = SeOpenData::Utils::DigestIndex.new
+      if File.exist? old_digest_index_file
+        old_digest_index.load(old_digest_index_file)
+      else 
+        Log.warn "No cached digest index found at #{old_digest_index_file}, "+
+                 "can only register all current murmurations profiles"
+      end
+
+      # Compare the old and new digest indexes and use that to mark
+      # profiles for update or removal
+      update = []
+      remove = []
+      keys = {}
+      old_digest_index.compare(new_digest_index) do |key, old_index, new_index|
+        if old_index != new_index
+          url = File.join(resolved_base_publish_url, key + '.murm.json')
+          keys[url] = key
+          
+          if new_index == nil
+            remove << url
+          else
+            update << url
+          end
+        end
+      end
+
+      # Perform the update/removals. Any failures will need to be
+      # noted.
+      statuses = SeOpenData::Murmurations.new(
+        base_publish_url: resolved_base_publish_url,
+        index_url: index_url,
+      ).register(
+        update_urls: update,
+        remove_urls: remove,
+      )
+
+      # If any registrations fail to update or remove, this means
+      # their cached digest index entry should be such that their
+      # state is always updated/removed next time. We do that by
+      # inserting an empty value, which is not "absent" but will
+      # never match a new digest
+      failures = statuses.to_a
+                   .filter { |item| item[1] == false }
+                   .collect { |item| keys[item[0]] }
+      new_digest_index.invalidate(*failures)
+
+      # Save the digest index
+      new_digest_index.save(old_digest_index_file)
+
+      return failures.size # A truthy value, indicating the number of failures
+    end
+
     # Gets the content of an URL, following redirects
     #
     # Also sets the 'Accept: application/rdf+xml' header.
