@@ -2,18 +2,134 @@ require "se_open_data/utils/log_factory"
 require "json"
 require "httparty"
 require 'normalize_country'
+require 'digest'
 
 module SeOpenData
   class Murmurations
     # Create a log instance
     Log = SeOpenData::Utils::LogFactory.default
+    Sha256 = Digest::SHA256.new
+    
+    def initialize(base_publish_url: , index_url:)
+      @base_publish_url = base_publish_url
+      @index_url = index_url
+      @register_url = index_url + '/nodes' 
+    end
 
+    # Returns a response code string or a status string
+    def status_check(node_id)
+      status_url = @register_url + '/' + node_id.to_s
+      
+      response = HTTParty.get(status_url)
+      unless response.code == 200
+        reason = "status check failed with response code #{response.code}"
+        Log.warn "Profile #{node_id}: #{reason}"
+        Log.debug response.body
+        return response.code
+      end
 
-    # ... FIXME
-    # - need country code everywhere
-    # - de-zero lat/lon?
+      content = response.parsed_response
+      
+      return content.dig('data', 'status')
+    end
+    
+    def remove(node_id)
+      delete_url = File.join(@index_url, node_id)
+      response = HTTParty.delete(delete_url)
+      unless response.code == 200
+        reason = "deletion failed with status #{response.code}"
+        Log.warn "Profile #{node_id}: #{reason}"
+        Log.debug response.body
+        return false
+      end
 
+      status = status_check(node_id)
+      if status != 'deleted'
+        reason = "deletion failed, status was '#{status}' not 'deleted'"
+        Log.warn "Profile #{node_id}: #{reason}"
+        Log.debug response.body
+        return false
+      end
+
+      Log.info "Deleted profile #{node_id}"
+      return true
+    end
+
+    def update(url)
+      response = HTTParty.post(@register_url, body: { profile_url: url }.to_json)
+      unless response.code == 200
+        reason = "registration failed with status #{response.code}"
+        Log.warn "Profile #{url}: #{reason}"
+        Log.debug response.body
+        return false
+      end
+      
+      node_id = response.parsed_response.dig('data', 'node_id')
+      unless node_id
+        reason = "registration gave no node id"
+        Log.warn "Profile #{url}: #{reason}"
+        Log.debug response.body
+        return false
+      end
+
+      status = status_check(node_id)
+      unless %w(posted received validated).include? status
+        reason = "status check failed with status/data #{status}"
+        Log.warn "Profile #{url}: #{reason}"
+        Log.debug response.body
+        return false
+      end
+        
+      Log.info "Registered #{url}"
+      return true
+    end
+    
+    # Register Murmurations profiles
     #
+    # base_publish_url: Prepended to profile filenames to get their published URLs
+    # index_url: the murmurations index server's base URL, assumed to be V2 of the API
+    # update_urls: an array of profile urls to update (defaults to empty list)
+    # remove_urls: an array of profile urls to remove (defaults to empty list)
+    # delay: seconds between calls (defaults to 0)
+    #
+    # Returns hash of all the profile URLs, mapped to false or a status string.
+    def register(update_urls: [], remove_urls: [], delay: 0)
+      if update_urls.empty? && remove_urls.empty?
+        Log.warn "No profiles to update or remove"
+        return {}
+      end
+
+      statuses = {}
+      Log.info "Registering #{update_urls.size} initiatives "+
+               "and removing #{remove_urls.size} on murmuations index at #{@register_url}"
+
+      # Remove profiles
+      remove_urls.each do |url|
+        sleep(delay)
+        node_id = Sha256.hexdigest(url)
+        statuses[url] = remove(node_id)
+      end
+      
+      # Update profiles
+      update_urls.each do |url|
+        sleep(delay)
+        statuses[url] = update(url)
+      end
+
+      failed = statuses.filter do |url, status|
+        status == false
+      end
+      
+      unless failed.empty?
+        reason = "failed to successfully update or remove #{failed.size} profiles"
+        Log.error reason
+      end
+
+      return statuses
+    end
+
+
+
     # This validates the fields conform to the schema specification,
     # truncating selected text fields if they can be, omitting others
     # if empty, but it may also raise an exception if there is some
