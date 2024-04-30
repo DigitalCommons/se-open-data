@@ -238,7 +238,7 @@ module SeOpenData
       config = load_config
 
       # Download the data
-      log.info etag(config.DOWNLOAD_URL)
+      Log.info etag(config.DOWNLOAD_URL)
       return true
     end
  
