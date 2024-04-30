@@ -44,7 +44,7 @@ module SeOpenData
     #
     # @return true if all steps succed, false if any fail.
     def self.command_run_all
-      %w(download convert generate deploy triplestore).each do |name|
+      %w(download convert generate deploy triplestore post_success).each do |name|
         Log.info "Running command #{name}"
         rc = send "command_#{name}".to_sym
         if rc != true && rc != 0
