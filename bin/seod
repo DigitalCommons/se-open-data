@@ -21,12 +21,15 @@ Where <command> can be:
 - download
 - convert
 - generate
+- generate_digest_index
+- generate_murmurations_profiles
 - generate_vocab_index
 - generate_rdf
 - deploy
 - triplestore
 - post_success
 - run_all
+- murmurations_registration
 - limesurvey_export
 - clean
 - help
