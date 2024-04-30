@@ -21,6 +21,7 @@ Where <command> can be:
 - download
 - convert
 - generate
+- generate_digest_index
 - generate_vocab_index
 - generate_rdf
 - deploy

@@ -300,6 +300,46 @@ module SeOpenData
       return invoke_script("converter")
     end
 
+    # Scan the STANDARD_CSV and generate a DIGEST_INDEX
+    #
+    # DIGEST_INDEX is a tab-delimited file with two columns: "Key" and
+    # "Digest".  It represents the state each row, indicated by the
+    # key, with a digest, allowing changes to be inferred generically.
+    #
+    # This information is intended to allow differential updates to
+    # downstream consumers of the data. The specific case in mind is a
+    # Murmurations index server, which has rate limiting which could
+    # limit the amount of data registered, and prefers to be notified
+    # only of changes (additions, deletions, and alterations).
+    #
+    # A digest index is read, manipulated and saved using the class
+    # SeOpenData::Utils::DigestIndex.  More details of the file format
+    # can be found there.
+    #
+    # DIGEST_INDEX and STANDARD_CSV are names of files (with no path)
+    # defined in the config. Their locations are, respectively, within
+    # GEN_DOC_DIR and TOP_OUTPUT_DIR.
+    #
+    # This returns true on success (actually, the number of non-header
+    # rows in the DIGEST_INDEX, which should equal the number of
+    # non-header rows in STANDARD_CSV)
+    def self.command_generate_digest_index()
+      require 'se_open_data/utils/digest_index'
+      
+      config = load_config
+      digest_file = config.fetch('DIGEST_INDEX', 'digest.tsv')
+      
+      FileUtils.mkdir_p config.GEN_DOC_DIR # need this subdir
+      digest_path = File.join(config.GEN_DOC_DIR, digest_file)
+
+      digest_index = SeOpenData::Utils::DigestIndex.new
+      digest_index
+        .load_csv(config.STANDARD_CSV, key_fields: ['Identifier']) # FIXME
+        .save(digest_path)
+
+      return digest_index.index.size
+    end
+
     # Generate a vocab index
     #
     # This index is a JSON file containing a look-up table of
