@@ -22,6 +22,7 @@ Where <command> can be:
 - convert
 - generate
 - generate_digest_index
+- generate_murmurations_profiles
 - generate_vocab_index
 - generate_rdf
 - deploy

@@ -442,6 +442,23 @@ module SeOpenData
 
       return true
     end
+
+    def self.command_generate_murmurations_profiles
+      require "se_open_data/murmurations"
+      require "csv"
+      config = load_config
+      FileUtils.mkdir_p config.GEN_DOC_DIR # need this subdir
+      
+      # Convert CSV into Murmurations data structures
+      ::CSV.foreach(config.STANDARD_CSV, headers:true) do |row|
+        next if row.header_row?
+
+        output_file = File.join(config.GEN_DOC_DIR, "#{row['Identifier']}.murm.json")
+        SeOpenData::Murmurations.write(config.GRAPH_NAME, row.to_h, output_file)
+      end
+      
+      return true
+    end
     
     # Generates the static data in `WWW_DIR` and `GEN_SPARQL_DIR`
     #
