@@ -270,7 +270,11 @@ module SeOpenData
     # script, or that the script determinied there was nothing new to
     # download. This allows unnecessary rebuilds to be avoided.
     def self.command_download
-      return invoke_script("downloader", allow_codes: 100, allow_absent: true, allow_failure: true)
+      case invoke_script("downloader", allow_codes: 100, allow_absent: true, allow_failure: true)
+      when true, nil then true
+      when 100 then 100
+      else false
+      end
     end
 
     # Runs the `converter` script in the current directory, if present
@@ -506,7 +510,8 @@ module SeOpenData
       FileUtils.rm_rf config.GEN_SPARQL_DIR
       
 
-      unless invoke_script("generator", allow_absent: true)
+      case invoke_script("generator", allow_absent: true)
+      when nil
         # Default generate behaviour, if there is no generator script
         command_generate_vocab_index
         command_generate_rdf
@@ -664,7 +669,10 @@ HERE
     # @return true on success, false if there was failure, nil to
     # indicate there is no post_success script.
     def self.command_post_success
-      invoke_script("post_success", allow_absent: true, allow_failure: true)
+      case invoke_script("post_success", allow_absent: true, allow_failure: true)
+      when true, nil then true
+      else false
+      end
     end
 
     # Attempts to register or remove initiatives published in a web
