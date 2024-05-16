@@ -793,19 +793,25 @@ HERE
       return failures.size # A truthy value, indicating the number of failures
     end
 
-    # Gets the content of an URL, following redirects
+    # HTTP Gets the content of an URL, following redirects
     #
-    # Also sets the 'Accept: application/rdf+xml' header.
+    # Headers can be provided with the headers parameter.
+    #
+    # Also sets the 'Accept: application/rdf+xml' header by default,
+    # i.e. if it is not present in the headers parameter. You can set
+    # the 'Accept' header to nil, or some preferred value to prevent this.
     #
     # @return the query content
-    def self.fetch(uri_str, limit: 10)
+    def self.fetch(uri_str, limit: 10, headers: nil)
       require "net/http"
       raise ArgumentError, "too many HTTP redirects" if limit == 0
 
       uri = URI(uri_str)
-      request = Net::HTTP::Get.new(uri)
-      request["Accept"] = "application/rdf+xml"
-
+      request = Net::HTTP::Get.new(uri, headers)
+      unless headers&.has_key? "Accept"
+        request["Accept"] = "application/rdf+xml"
+      end
+      
       Log.info "fetching #{uri}"
       response = Net::HTTP.start(
         uri.hostname, uri.port,
