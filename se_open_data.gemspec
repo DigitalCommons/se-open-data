@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.authors     = ["Digital Commons Co-operative"]
   s.email       = 'tech.accounts@digitalcommons.coop'
   s.files       =  Dir['lib/**/*.rb'] + Dir['bin/**'] + Dir['resources/**']
-  s.executables.concat %w(seod export-lime-survey)
+  s.executables.concat %w(seod export-lime-survey vocab-json schema2schema)
   s.homepage    = 'https://github.com/DigitalCommons/se-open-data'
   s.metadata    = { "source_code_uri" => "https://github.com/DigitalCommons/se-open-data" }
 
