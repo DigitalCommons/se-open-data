@@ -1,0 +1,116 @@
+#!/usr/bin/env ruby
+
+# This tool is for converting schema files between formats.
+
+require 'getoptlong'
+require 'date'
+require_relative '../lib/load_path'
+require 'se_open_data/utils/log_factory'
+require 'se_open_data/csv/schema'
+
+class Schema2Schema
+  # Create a log instance
+  Log = SeOpenData::Utils::LogFactory.default
+  
+  def usage(cmd, error=nil)
+    error = if error
+              "#{error}\n\n"
+            else
+              ''
+            end
+    
+    return <<USAGE
+#{error}
+
+Converts a CSV schema from one format to another
+
+usage:
+   #{cmd} --id <ID> --name <NAME> [<ARGS>]  <input file> <output file>
+
+Where:
+
+ - <input file> is the path to a schema file in a supported format indicated by the extension
+ - <output file> is the path to a schema file to write, likewise
+ - <ID> is the symbolic ID to use for the schema (must be a lowercase alphanumeric 
+   identifier with no spaces
+
+ - <ARGS> can be any of the options:
+   - --name <NAME> - supplying a name for the schema (defaults to the file basename if not
+      set in the input schema)
+   - --description <DESCRIPTION> - supplying a description for the schema (defaults to none
+     if not set in the input schema)
+   - --comment <COMMENT> - supplying a comment for the schema (defaults to none
+     if not set in the input schema)
+   - --version <VERSION> is a version string, recommended of the form YYYYMMDD. One will
+      be generated from the current date if not set in the input schema
+
+When importing from CSV, expected fields are:
+
+- id: is the symbolic ID to use for the field (must be a lowercase alphanumeric 
+  identifier with no spaces)
+- primary: TRUE if the field should be a primary key; FALSE or absent otherwise.
+- header: a string matching the CSV header to expect for the field
+- desc: An abitrary description for the field, may be empty
+- comment: An arbitrary comment for the field, may be empty
+
+
+USAGE
+  
+  end
+  
+
+  # Parse and validate ARGV and use the result generate a schema
+  def run(filename = File.basename(__FILE__))
+    opts = GetoptLong.new(
+      [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+      [ '--id',  GetoptLong::REQUIRED_ARGUMENT],
+      [ '--name',  GetoptLong::REQUIRED_ARGUMENT],
+      [ '--description',  GetoptLong::REQUIRED_ARGUMENT],
+      [ '--comment',  GetoptLong::REQUIRED_ARGUMENT],
+      [ '--version',  GetoptLong::REQUIRED_ARGUMENT],
+    )
+
+    id = name = version = nil
+    description = comment = ''
+    
+    opts.each do |opt, arg|
+      case opt
+      when '--help'
+        warn usage
+        return
+      when '--id'
+        id = arg
+      when '--name'
+        name = arg
+      when '--description'
+        description = arg
+      when '--comment'
+        comment = arg
+      when '--version'
+        version = arg
+      end
+    end
+    
+    abort usage(filename, opts.error) if opts.error
+    abort usage(filename, "two parameters must be supplied ") if ARGV.length != 2
+    
+    (csv_file, yaml_file) = ARGV
+    
+    ext = File.extname(yaml_file)
+    basename = File.basename(yaml_file, ext)
+    id ||= basename
+    name ||= basename
+     
+    schema = SeOpenData::CSV::Schema.load_file(csv_file)
+    schema.id = id
+    schema.name = name
+    schema.version = version if version
+    schema.description = description if description
+    schema.comment = comment if comment
+
+    schema.save_file(yaml_file)
+  end
+
+end
+
+Schema2Schema.new.run
