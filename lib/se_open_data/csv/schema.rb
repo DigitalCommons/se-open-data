@@ -14,9 +14,11 @@ module SeOpenData
       }
       DEFAULT_OUTPUT_CSV_OPTS = {
       }
-      
-      attr_reader :id, :name, :version, :description, :comment, :fields, :field_ids,
-                  :field_headers, :primary_key
+      DEFAULT_CSV_SCHEMA_HEADERS = 
+        %w(id header description comment primary)
+
+      attr_accessor :id, :name, :version, :description, :comment
+      attr_reader :fields, :field_ids, :field_headers, :primary_key
       
       def initialize(id:, name: id, version: 0, description: '', comment: '', fields:,
                      primary_key: [])
@@ -217,19 +219,92 @@ module SeOpenData
         @fields.map {|field| [field.id, field.header] }.to_h
       end
 
+      def self.load_csv(file, id:)
+        data = {}
+        opts = {headers: true}
+        pk_ids = []
+        fields = []
+        version = Date.today.strftime('%Y%m%d')
+        ix = 0
+        
+        ::CSV.foreach(file, **opts) do |row|
+          if ix == 0
+            if row.headers.sort != DEFAULT_CSV_SCHEMA_HEADERS.sort
+              raise RuntimeError, "Unexpected CSV headers: "+
+                                  "expected #{DEFAULT_CSV_SCHEMA_HEADERS.inspect}, "+
+                                  "got #{row.headers.inspect}"
+            end
+          end
+          
+          (id, header, desc, comment, pk) = row.fields(*DEFAULT_CSV_SCHEMA_HEADERS)
+          
+          field = SeOpenData::CSV::Schema::Field.new(
+            id: id,
+            index: ix,
+            header: header,
+            desc: desc,
+            comment: comment,
+          )
+          
+          pk_ids << id if pk.to_s.downcase == 'true'
+          fields << field
+          ix += 1
+        end
 
-      # This loads a schema from a (yaml) file
-      def self.load_file(file)
+        return self.new(
+                 id: id,
+                 primary_key: pk_ids,
+                 version: version,
+                 description: '',
+                 comment: '',
+                 fields: fields,
+               )
+      end
+
+      def self.load_yaml(file)
         require 'yaml'
         data = YAML.load_file(file)
         data.transform_keys!(&:to_sym)
         data[:fields].each { |field| field.transform_keys!(&:to_sym) }
+
         return self.new(**data)
       end
 
+      
+      protected
 
-      # This saves the schema to a (yaml) file
-      def save_file(file)
+      def self.get_type(file)
+        ext = File.extname(file)
+        basename = File.basename(file, ext)
+
+        case ext.downcase
+        when '.yaml','.yml' then [:yaml, basename, ext]
+        when '.csv' then [:csv, basename, ext]
+        else raise ArgumentError,
+                   "unknown file extension '#{ext}', specify the type explicitly"
+        end
+      end
+        
+      public
+      
+      # This loads a schema from a (.yaml or .csv or .tsv) file
+      def self.load_file(file, type: nil)
+        (_type, basename, ext) = get_type(file)
+        type ||= _type
+        
+        case type
+        when :yaml
+          return load_yaml(file)
+
+        when :csv
+          return load_csv(file, id: basename)
+          
+        else
+          raise ArgumentError, "#load_file received unknown schema file type: '#{type}'"
+        end
+      end
+
+      def save_yaml(file)
         require 'yaml'
         data = {
           'id' => @id,
@@ -245,6 +320,47 @@ module SeOpenData
         return
       end
       
+      def save_csv(file, **opts)
+        data = {
+          'id' => @id,
+          'name' => @name,
+          'version' => @version,
+          'primary_key' => @primary_key,
+          'comment' => @comment,
+          'fields' => @fields.collect { |field| field.to_h }, 
+        }
+        unless opts.has_key? :write_headers
+          opts[:write_headers] = true
+          opts[:headers] = Schema::DEFAULT_CSV_SCHEMA_HEADERS
+        end
+        
+        ::CSV.open(file, 'w', **opts) do |csv|
+          @fields.each do |field|
+            is_primary = primary_key.include? field.id
+            csv << [field.id, field.header, field.desc, field.comment, is_primary]
+          end
+        end
+        return
+      end
+      
+      # This saves the schema to a file, the type defined by the file
+      # extension, or the type: option
+      def save_file(file, type: nil)
+        (_type, _) = Schema.get_type(file)
+        type ||= _type
+        
+        case type
+        when :yaml
+          return save_yaml(file)
+
+        when :csv
+          return save_csv(file)
+          
+        else
+          raise ArgumentError, "#save_file received unknown schema file type: '#{type}'"
+        end
+      end
+
       
       # This implements the top-level DSL for CSV conversions.
       def self.converter(from_schema:, to_schema:,
