@@ -29,6 +29,7 @@ module SeOpenData
         @description = description
         invalids = []
         @primary_key = primary_key.to_a.collect do |id|
+          id = id.to_sym
           invalids << id unless @fields.find {|field| field.id == id} # validate
           id # copy
         end
