@@ -379,6 +379,26 @@ module SeOpenData
           **other_opts)
       end
 
+      def self.write_converter(from_schema:, to_schema:,
+                               path_or_io: nil)
+        require 'erb'
+
+        template = ERB.new(TEMPLATE, trim_mode: '-')
+        content = template.result(binding)
+
+        case path_or_io
+        when String
+          IO.write(path_or_io, content)
+          File.chmod(0755, path_or_io)
+        when ->(n) { n.respond_to? :write }
+          path_or_io.write(content)
+        when nil
+          $stdout.write(content)
+        else
+          raise ArgumentError, "invalid path type: #{path.class}"
+        end
+      end
+
       # Defines a field in a schema
       class Field
         attr_reader :id, :index, :header, :desc, :comment
@@ -809,6 +829,96 @@ module SeOpenData
         alias convert each_row
         alias csv_convert each_row
       end
+      
+      TEMPLATE =<<'END'
+#!/usr/bin/env ruby
+# coding: utf-8
+#
+# This script controls a pipeline of processes that convert the original
+# CSV data into the se_open_data standard, one step at a time.
+#
+# We aim to put only logic specific to this project in this file, and
+# keep it brief and clear. Shared logic should go into the {SeOpenData}
+# library.
+#
+# This script can be invoked directly, or as part of the {SeOpenData}
+# library's command-line API {SeOpenData::Cli}. For example, this
+# just runs the conversion step (or specifically: a script in the
+# current directory called `converter`):
+#
+#     seod convert 
+#
+# And this runs the complete chain of commands generating and
+# deploying the linked data for this project, as configured by
+# `settings/config.txt`:
+#
+#     seod run-all
+#
+# See the documentation on [`seod`]({SeOpenData::Cli}) for more
+# information.
+
+require 'se_open_data/setup'
+require 'se_open_data/csv/schema/types'
+#require 'normalize_country'
+
+# A class which defines callback methods #on_header, #on_row, and #on_end, 
+# that are called during the conversion process.
+class Observer < SeOpenData::CSV::Schema::Observer
+  Types = SeOpenData::CSV::Schema::Types
+
+  # Set up anything persistent you need here  
+  def initialize(setup:)
+    super()
+    @geocoder = setup.geocoder
+  end
+
+  # Called with an array of header fields, and a field_map, which
+  # is an array of integers denoting the schema index for each header
+  def on_header(header:, field_map:)
+    @ix = 0
+  end
+  
+  def on_row(
+        # These parameters match source schema field ids
+        <%- from_schema.fields.each do |field| -%>
+        <%-   if field.index+1 < from_schema.fields.size -%>
+        <%=      field.id %>:,
+        <%-   else -%>
+        <%=      field.id %>:
+        <%-   end -%>
+        <%- end -%>
+      )
+
+    # Examples of common preliminary steps:
+    # addr = Types.normalise_addr(city, state_region, postcode, country)
+    # warn "row #{record_id} #{addr}"
+    # country_id = NormalizeCountry(country)
+    geocoded = nil #@geocoder.call(addr)
+    @ix += 1
+
+    # Replace these with the actual values to write.
+    # You may yield zero or many times if desired, and the equivalent number
+    # of rows will be emitted.
+    <%- to_schema.fields.each do |field| -%>
+    <%    case field.index+1 -%>
+    <%-   when 1 then %>yield <%= field.id -%>: @ix,
+    <%-   when to_schema.fields.size -%>      <%= field.id %>: nil
+    <%    else %>      <%= field.id %>: nil,
+    <%-   end -%>
+    <%- end -%>
+  end
+
+  # Called after all the rows have been processed
+  def on_end
+  end
+
+end
+
+SeOpenData::Setup
+  .new
+  .convert_with(observer: Observer)
+END
     end
   end
 end
+
