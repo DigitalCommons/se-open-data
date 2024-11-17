@@ -107,6 +107,17 @@ module SeOpenData
           val =~ /^[+-]?\d+[.]\d+$/? val : default
         end
 
+        # given a list of address parts via the parameters, try to
+        # clean it the parts, removing extra commas, strange
+        # punctuation etc.  and return a concatenated version
+        # delimited by commas.
+        def self.normalise_addr(*parts)
+          parts.compact
+            .map {|it| it.strip.gsub(/[;,](\s*[;,])+/, ',').gsub(/[\s,;]*$/, '') }
+            .select {|it| it != '' }
+            .join(", ")
+        end
+  
         def self.to_sym(str)
           parameterize(str.strip.downcase.tr('-','_'), separator: "_").to_sym
         end
