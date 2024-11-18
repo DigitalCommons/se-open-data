@@ -1,0 +1,105 @@
+#!/usr/bin/env ruby
+
+# This tool is for generating schema converter scripts
+
+require 'getoptlong'
+require 'date'
+require_relative '../lib/load_path'
+require 'se_open_data/utils/log_factory'
+require 'se_open_data/csv/schema'
+require 'se_open_data/setup'
+
+class WriteConverter
+  # Create a log instance
+  Log = SeOpenData::Utils::LogFactory.default
+  
+  def usage(cmd, error=nil)
+    error = if error
+              "#{error}\n\n"
+            else
+              ''
+            end
+    
+    return <<USAGE
+#{error}
+
+Geenrates a CSV schema converter script
+
+usage:
+   #{cmd} --id <ID> --name <NAME> [<ARGS>]  <input file> <output file>
+
+Where:
+
+ - <input file> is the path to a schema file in a supported format indicated by the extension
+ - <output file> is the path to a schema file to write, likewise
+ - <ID> is the symbolic ID to use for the schema (must be a lowercase alphanumeric 
+   identifier with no spaces
+
+ - <ARGS> can be any of the options:
+   - --name <NAME> - supplying a name for the schema (defaults to the file basename if not
+      set in the input schema)
+   - --description <DESCRIPTION> - supplying a description for the schema (defaults to none
+     if not set in the input schema)
+   - --comment <COMMENT> - supplying a comment for the schema (defaults to none
+     if not set in the input schema)
+   - --version <VERSION> is a version string, recommended of the form YYYYMMDD. One will
+      be generated from the current date if not set in the input schema
+
+When importing from CSV, expected fields are:
+
+- id: is the symbolic ID to use for the field (must be a lowercase alphanumeric 
+  identifier with no spaces)
+- primary: TRUE if the field should be a primary key; FALSE or absent otherwise.
+- header: a string matching the CSV header to expect for the field
+- desc: An abitrary description for the field, may be empty
+- comment: An arbitrary comment for the field, may be empty
+
+
+USAGE
+  
+  end
+  
+
+  # Parse and validate ARGV and use the result generate a schema
+  def run(filename = File.basename(__FILE__))
+    opts = GetoptLong.new(
+      [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+      [ '--from',  GetoptLong::REQUIRED_ARGUMENT],
+      [ '--to',  GetoptLong::REQUIRED_ARGUMENT],
+    )
+    
+    from = to = nil
+    opts.each do |opt, arg|
+      case opt
+      when '--help'
+        warn usage
+        return
+      when '--from'
+        from = arg
+      when '--to'
+        to = arg
+      end
+    end
+    
+    abort usage(filename, opts.error) if opts.error
+    
+    output = case ARGV.size
+             when 0 then $stdout
+             when 1 then ARGV[0]
+             else
+               raise ArgumentError, "too many arguments"
+             end
+
+    setup = SeOpenData::Setup.new
+    setup.from_schema_file = from if from
+    setup.to_schema_file = to if to
+
+    SeOpenData::CSV::Schema.write_converter(
+      from_schema: setup.from_schema,
+      to_schema: setup.to_schema,
+      path_or_io: output
+    )
+  end
+end
+  
+  WriteConverter.new.run
