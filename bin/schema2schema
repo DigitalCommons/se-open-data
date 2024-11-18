@@ -7,6 +7,7 @@ require 'date'
 require_relative '../lib/load_path'
 require 'se_open_data/utils/log_factory'
 require 'se_open_data/csv/schema'
+require 'se_open_data/csv/schemas'
 
 class Schema2Schema
   # Create a log instance
@@ -63,6 +64,7 @@ USAGE
   def run(filename = File.basename(__FILE__))
     opts = GetoptLong.new(
       [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+      [ '--from',  GetoptLong::REQUIRED_ARGUMENT],
       [ '--id',  GetoptLong::REQUIRED_ARGUMENT],
       [ '--name',  GetoptLong::REQUIRED_ARGUMENT],
       [ '--description',  GetoptLong::REQUIRED_ARGUMENT],
@@ -70,7 +72,7 @@ USAGE
       [ '--version',  GetoptLong::REQUIRED_ARGUMENT],
     )
 
-    id = name = version = nil
+    id = name = version = from_version = from_file = to_file = schema = nil
     description = comment = ''
     
     opts.each do |opt, arg|
@@ -86,29 +88,51 @@ USAGE
         description = arg
       when '--comment'
         comment = arg
+      when '--from'
+        from_version = arg
       when '--version'
         version = arg
       end
     end
     
     abort usage(filename, opts.error) if opts.error
-    abort usage(filename, "two parameters must be supplied ") if ARGV.length != 2
+    if from_version
+      abort usage(filename, "one parameter must be supplied") if ARGV.length != 1
+      to_file, = ARGV
+    else
+      abort usage(filename, "two parameters must be supplied") if ARGV.length != 2
+      from_file, to_file = ARGV
+    end
     
-    (csv_file, yaml_file) = ARGV
-    
-    ext = File.extname(yaml_file)
-    basename = File.basename(yaml_file, ext)
-    id ||= basename
-    name ||= basename
+    # Use a built-in version
+    case from_version
+    when /^limesurveycore(:(-?\d+))?$/
+      ix = $2 == ''? -1 : $2.to_i
+      schema = SeOpenData::CSV::Schemas::LimeSurveyCore::Versions[ix]
+      raise "No such version: #{from_version}" unless schema
+      
+    when /^standard(:(-?\d+))?$/
+      ix = $2 == ''? -1 : $2.to_i
+      schema = SeOpenData::CSV::Schemas::Versions[ix]
+      raise "No such version: #{from_version}" unless schema
+      
+    when nil    
+      ext = File.extname(to_file)
+      basename = File.basename(to_file, ext)
+      id ||= basename
+      name ||= basename
      
-    schema = SeOpenData::CSV::Schema.load_file(csv_file)
-    schema.id = id
-    schema.name = name
-    schema.version = version if version
-    schema.description = description if description
-    schema.comment = comment if comment
-
-    schema.save_file(yaml_file)
+      schema = SeOpenData::CSV::Schema.load_file(from_file)
+      schema.id = id
+      schema.name = name
+      schema.version = version if version
+      schema.description = description if description
+      schema.comment = comment if comment
+    else
+      raise "Unrecognised target given to --from: #{from_version}"
+    end
+    
+    schema.save_file(to_file)
   end
 
 end
