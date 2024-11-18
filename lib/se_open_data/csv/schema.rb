@@ -136,7 +136,7 @@ module SeOpenData
       # The values are validated during this process.
       #
       # This is used to creating a hash of input data keyed by our
-      # field IDs, to pass to the row-transform block accepted by the
+      # field IDs, to pass to the Observer accepted by the
       # {Converter} class's constructor, {Converter.new}.
       #
       # @param row [Array] - an array of data values
@@ -375,8 +375,28 @@ module SeOpenData
           to_schema: to_schema,
           input_csv_opts: input_csv_opts,
           output_csv_opts: output_csv_opts,
-          **other_opts,
-          &block)
+          observer: block,
+          **other_opts)
+      end
+
+      def self.write_converter(from_schema:, to_schema:,
+                               path_or_io: nil)
+        require 'erb'
+
+        template = ERB.new(TEMPLATE, trim_mode: '-')
+        content = template.result(binding)
+
+        case path_or_io
+        when String
+          IO.write(path_or_io, content)
+          File.chmod(0755, path_or_io)
+        when ->(n) { n.respond_to? :write }
+          path_or_io.write(content)
+        when nil
+          $stdout.write(content)
+        else
+          raise ArgumentError, "invalid path type: #{path.class}"
+        end
       end
 
       # Defines a field in a schema
@@ -414,20 +434,46 @@ module SeOpenData
         end
       end
 
+      # This is an base class for Observers to pass to the Converter.
+      # It does nothing, and is expected to be subclassed to add some sort of
+      # implementation.
+      class Observer
+        # Called for each CSV row being processed.
+        # fields - a hash of fields keyed by ID (not headers)
+        # It should yield for each output row with a hash keyed by output schema IDs
+        # The return value is discarded.
+        def on_row(**fields, &block)
+        end
+
+        # Called before parsing the CSV, when the headers
+        # are available
+        def on_header(header:, field_map:)
+        end
+
+        # Called after al the CSV rows are parsed
+        def on_end
+        end
+
+      end
+
       # Defines a number of file conversion methods.
       #
       # Most notably, the method {#each_row} performs schema
       # validation and tries to facilitate simple mapping of row
-      # fields, using the block provided to the constructor.
+      # fields, using the Observer instance provided to the constructor.
       class Converter
-        attr_reader :from_schema, :to_schema, :block, :opts
+        attr_reader :from_schema, :to_schema, :observer, :opts
 
         # Constructs an instance designed for use with the given input
         # and output CSV schemas.
         #
-        # Rows are parsed and transformed using {#block}, which is
-        # given a hash whose keys are {#from_schema} field IDs, and
-        # values are the corresponding data fields.
+        # Rows are parsed and transformed using an instance of
+        # SeOpenData::CSV::Observer passed to the constructor and
+        # accessible via the {#observer} method.
+
+        # FIXME This which is given a
+        # hash whose keys are {#from_schema} field IDs, and values are
+        # the corresponding data fields.
         #
         # The block is normally expected to return another Hash, whose
         # keys are {#to_schema} fields, and values transformed data
@@ -454,20 +500,44 @@ module SeOpenData
         # (just warn), or 'error' (raise an error). Defaults to false.
         def initialize(from_schema:,
                        to_schema:,
-                       input_csv_opts: {},
-                       output_csv_opts: {},
+                       input_csv_opts: Schema::DEFAULT_INPUT_CSV_OPTS,
+                       output_csv_opts: Schema::DEFAULT_OUTPUT_CSV_OPTS,
                        reject_duplicate_pks: false,
                        reject_invalid_pks: false,
-                       &block)
+                       observer:)
           @from_schema = from_schema
           @to_schema = to_schema
           @input_csv_opts = input_csv_opts
           @output_csv_opts = output_csv_opts
-          @block = block          
           @opts = {
             reject_invalid_pks: reject_invalid_pks,
             reject_duplicate_pks: reject_duplicate_pks,
           }
+          case observer
+          when Observer # we have an Observer
+            @observer = observer 
+
+          when Proc # Create an Observer wrapping the proc given using the old API
+            @observer = Observer.new 
+            @observer.define_singleton_method(:on_row) do |*args, **opts, &block|
+              new_id_hashes = observer.call(*args, **opts)
+              # Handle null, single, or multiple results
+              case new_id_hashes
+              when Hash # One item
+                block.call(new_id_hashes)
+              when Array # multiple items
+                new_id_hashes.each {|hash| block.call(hash) }
+              when nil # none, do nothing
+              else # Something unexpected
+                raise ArgumentError, "unexpected non-hash non-array result from "+
+                                     "block: #{new_id_hashes.class}"
+              end
+            end
+
+          else
+            raise ArgumentError, "Invalid observer parameter: #{observer}"
+          end
+
           # Validate @opts
           @opts.keys.each do |key|
             case @opts[key]
@@ -524,6 +594,8 @@ module SeOpenData
             headers = csv_in.shift
             field_map = @from_schema.validate_headers(headers) # This may throw
 
+            @observer.on_header(header: headers, field_map: field_map)
+
             # Write the output headers
             csv_out << @to_schema.field_headers
             
@@ -535,14 +607,19 @@ module SeOpenData
               index += 1
               # This may throw if validation fails
               id_hash = @from_schema.id_hash(row, field_map)
+              
               yielder << id_hash
             end
             
-            transform(enum_in, csv_out, &block)
+            transform(enum_in, csv_out)
 
+            @observer.on_end
+            
             return
           rescue => e
-            raise ArgumentError, "error when converting element #{index} of data, exected to have schema :#{@from_schema.id}, to schema :#{@to_schema.id} : #{e.message}"
+            raise ArgumentError, "error when converting element #{index} of data, "+
+                                 "expected to have an input schema of :#{@from_schema.id}, "+
+                                 "and a output schema :#{@to_schema.id}, but: #{e.message}"
           end
         end
 
@@ -582,11 +659,11 @@ module SeOpenData
         # output file with another.
         # 
         # The schemas are defined by in_schema and out_schema. A
-        # transform is performed on the items using the transformer
-        # block supplied to the constructor.
+        # transform is performed on the items using the Observer
+        # instance supplied to the constructor.
         #
         # Performs schema validation and tries to facilitate simple
-        # mapping of row fields, using the {#block} provided to the
+        # mapping of row fields, using the {observer} provided to the
         # constructor (See {.new}.)
         #
         # The output stream is opened as a CSV stream using
@@ -595,12 +672,12 @@ module SeOpenData
         # Headers of all items in the input data list are validated
         # validated according to {#from_schema}, and used to create a
         # field mapping for the ordering in this file (which is not
-        # assumed to match the schema's).
+        # assumed to match the schema's).x
         #
         # Output headers are then written to the output stream (in the
         # order defined by {#to_schema}).
         #
-        # Then each row is parsed and transformed using {#block}, then
+        # Then each row is parsed and transformed using {Observer#on_row}, then
         # the result written to the output CSV stream.
         #
         # @param enum_in [Enumerator] an enumerable object containing Hashes with the expected form
@@ -624,24 +701,29 @@ module SeOpenData
               end
 
               field_map = @from_schema.validate_headers(item.keys) # This may throw
-              id_hash = @from_schema.id_hash(item.values, field_map)
 
+              @observer.on_header(header: item.keys, field_map: field_map)
+              
+              id_hash = @from_schema.id_hash(item.values, field_map)
+              
               # id_hash has now got the schema the transform method expects
               # (i.e. the normalised schema defined by @from_schema)
               yielder << id_hash
             end
-
+            
             # Send the data, prepropressed through the above block,
-            # through the transformer
+            # through @observer
             transform(pp_enum_in, csv_out)
+
+            @observer.on_end
           end
         end
-
         
-        # Iterates over an enumerable enum_in, expecting ID->value hash elements
+        
+        # Iterates over an enumerable enum_in, passing the headers and
+        # rows to observer#on_header and observer#on_row, and
+        # finalling calling observer#on_end.
         #
-        # Calls block on each hash, with the hash as named parameters. Expects the
-        # return value to be:
         #
         # - another hash, which is the transformed result,
         # - an array of transformed hashes, if the result corresponds to multiple elements
@@ -666,44 +748,36 @@ module SeOpenData
         # Otherwise, each hash returned by the transformer block is
         # transformed into an array using to @to_schema#row, and that
         # is added into enum_out using the << operator.
-        def transform(enum_in, enum_out, &transformer)
+        def transform(enum_in, enum_out)
           # Auto-vivifying hash recording primary keys seen
           pk_seen = Hash.new do |hash,key|
             hash[key] = Hash.new(&hash.default_proc)
           end
 
-          # Default to using the built-in block
-          transformer ||= @block
-
           enum_in.each do |id_hash|
-            new_id_hashes =
-              begin
-                transformer.call(**id_hash)
-              rescue ArgumentError => e
-                # Try to reword the error helpfully from:
-                match = e.message.match(/(missing|unknown) keywords?: (.*)/)
-                if match
-                  if match[1] == 'unknown'
-                    # missing keywords
-                    raise ArgumentError,
-                          "block must consume remaining keyword parameters for these "+
-                          "'#{@from_schema.id}' schema field ids: #{match[2]}"
-                  elsif match[1] == 'missing'
-                    # unknown keywords
-                    raise ArgumentError,
-                          "block keyword parameters do not match '#{@from_schema.id}'"+
-                          " schema field ids: #{match[2]}"
-                  end
-                else
-                  raise
-                end
+            new_id_hashes = []
+            begin
+              @observer.on_row(**id_hash) do |new_id_hash|
+                new_id_hashes << new_id_hash
               end
-            
-            # Normalise the resulting record or records to an iterable:
-            if new_id_hashes.nil?
-              new_id_hashes = []
-            elsif new_id_hashes.is_a? Hash
-              new_id_hashes = [new_id_hashes]
+            rescue ArgumentError => e
+              # Try to reword the error helpfully from:
+              match = e.message.match(/(missing|unknown) keywords?: (.*)/)
+              if match
+                if match[1] == 'unknown'
+                  # missing keywords
+                  raise ArgumentError,
+                        "Observer#on_row implementation must consume remaining keyword "+
+                        "parameters for these '#{@from_schema.id}' schema field ids: #{match[2]}"
+                elsif match[1] == 'missing'
+                  # unknown keywords
+                  raise ArgumentError,
+                        "Observer#on_row implementation's keyword parameters do not match "+
+                        "'#{@from_schema.id}' schema field ids: #{match[2]}"
+                end
+              else
+                raise
+              end
             end
 
             new_id_hashes.each do |new_id_hash|
@@ -731,7 +805,7 @@ module SeOpenData
               enum_out << row
             end
           rescue => e
-            raise RuntimeError, "#{e.message}\nwhilst parsing row data:\n#{'%.160s' % id_hash}"
+            raise RuntimeError, "#{e.message}\nwhen parsing this row data:\n#{'%.160s' % id_hash}"
           end
         end
 
@@ -755,6 +829,96 @@ module SeOpenData
         alias convert each_row
         alias csv_convert each_row
       end
+      
+      TEMPLATE =<<'END'
+#!/usr/bin/env ruby
+# coding: utf-8
+#
+# This script controls a pipeline of processes that convert the original
+# CSV data into the se_open_data standard, one step at a time.
+#
+# We aim to put only logic specific to this project in this file, and
+# keep it brief and clear. Shared logic should go into the {SeOpenData}
+# library.
+#
+# This script can be invoked directly, or as part of the {SeOpenData}
+# library's command-line API {SeOpenData::Cli}. For example, this
+# just runs the conversion step (or specifically: a script in the
+# current directory called `converter`):
+#
+#     seod convert 
+#
+# And this runs the complete chain of commands generating and
+# deploying the linked data for this project, as configured by
+# `settings/config.txt`:
+#
+#     seod run-all
+#
+# See the documentation on [`seod`]({SeOpenData::Cli}) for more
+# information.
+
+require 'se_open_data/setup'
+require 'se_open_data/csv/schema/types'
+#require 'normalize_country'
+
+# A class which defines callback methods #on_header, #on_row, and #on_end, 
+# that are called during the conversion process.
+class Observer < SeOpenData::CSV::Schema::Observer
+  Types = SeOpenData::CSV::Schema::Types
+
+  # Set up anything persistent you need here  
+  def initialize(setup:)
+    super()
+    @geocoder = setup.geocoder
+  end
+
+  # Called with an array of header fields, and a field_map, which
+  # is an array of integers denoting the schema index for each header
+  def on_header(header:, field_map:)
+    @ix = 0
+  end
+  
+  def on_row(
+        # These parameters match source schema field ids
+        <%- from_schema.fields.each do |field| -%>
+        <%-   if field.index+1 < from_schema.fields.size -%>
+        <%=      field.id %>:,
+        <%-   else -%>
+        <%=      field.id %>:
+        <%-   end -%>
+        <%- end -%>
+      )
+
+    # Examples of common preliminary steps:
+    # addr = Types.normalise_addr(city, state_region, postcode, country)
+    # warn "row #{record_id} #{addr}"
+    # country_id = NormalizeCountry(country)
+    geocoded = nil #@geocoder.call(addr)
+    @ix += 1
+
+    # Replace these with the actual values to write.
+    # You may yield zero or many times if desired, and the equivalent number
+    # of rows will be emitted.
+    <%- to_schema.fields.each do |field| -%>
+    <%    case field.index+1 -%>
+    <%-   when 1 then %>yield <%= field.id -%>: @ix,
+    <%-   when to_schema.fields.size -%>      <%= field.id %>: nil
+    <%    else %>      <%= field.id %>: nil,
+    <%-   end -%>
+    <%- end -%>
+  end
+
+  # Called after all the rows have been processed
+  def on_end
+  end
+
+end
+
+SeOpenData::Setup
+  .new
+  .convert_with(observer: Observer)
+END
     end
   end
 end
+
