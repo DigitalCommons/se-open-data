@@ -11,11 +11,20 @@ module SeOpenData
         # Create a log instance
         Log = SeOpenData::Utils::LogFactory.default
 
-        def self.normalise_email(val, default: '')
-          val.to_s =~ /\A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i? val : default # FIXME report mismatches
+        def self.normalise_email(val, default: '', throw: false)
+          if val.to_s =~ /\A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i
+            val
+          else
+            if throw
+              raise ArgumentError, "malformed email: "+val
+            else
+              Log.info("This doesn't look like an email: #{val})")
+              default
+            end
+          end
         end
         
-        def self.normalise_url(str, default: '', full_url: false)
+        def self.normalise_url(str, default: '', full_url: false, throw: false)
           val = str.to_s.strip.downcase
 
           match = val.match(%r{^(https?):/+(.*)}) # remove any URL scheme for now
@@ -38,18 +47,21 @@ module SeOpenData
             return "#{scheme}://#{nrest}"
           end
 
-          Log.info("This doesn't look like a website: #{str})")
-          return default
+          if throw
+            raise ArgumentError, "This doesn't look like a website: #{str})"
+          else
+            Log.info("This doesn't look like a website: #{str})")
+            return default
+          end
         end
 
-        def self.normalise_facebook(items, base_url: 'https://www.facebook.com/')
+        def self.normalise_facebook(items, base_url: 'https://www.facebook.com/', throw: false)
           return nil unless items
           items = [items] unless items.respond_to? :each
 
           items.each do |str|
-            Log.debug "Attempting to normalise FB URL: #{str}"
-            url = normalise_url(str.to_s, default: nil, full_url: true)
-            if url.nil?
+            Log.debug "Attempting to normalise Facebook URL: #{str}"
+            url = normalise_url(str.to_s, default: nil, full_url: true, throw: throw)
               Log.info "Ignoring un-normalisable URL: #{str}"
               next
             end
@@ -68,19 +80,23 @@ module SeOpenData
             url.downcase.match(%r{^https?://([\w-]+\.)?fb.me/(.+)}) do |m|
               return base_url+m[2]
             end
+
+            if throw
+              raise ArgumentError, "non-Facebook URL: #{str}"
+            end
             
             Log.info "Ignoring non-facebook URL: #{str}"
           end
           return nil
         end
 
-        def self.normalise_twitter(items, base_url: 'https://twitter.com/')
+        def self.normalise_twitter(items, base_url: 'https://twitter.com/', throw: false)
           return nil unless items
           items = [items] unless items.respond_to? :each
 
           items.each do |str|
             Log.debug "Attempting to normalise Twitter URL: #{str}"
-            url = normalise_url(str.to_s, default: nil, full_url: true)
+            url = normalise_url(str.to_s, default: nil, full_url: true, throw: throw)
             if url.nil?
               Log.info "Ignoring un-normalisable URL: #{str}"
               next
@@ -98,13 +114,25 @@ module SeOpenData
               return base_url+m[2]
             end
             
+            if throw
+              raise ArgumentError, "non-twitter URL: #{str}"
+            end
+            
             Log.info "Ignoring non-twitter URL: #{str}"
           end
           return nil
         end
 
-        def self.normalise_float(val, default: 0)
-          val =~ /^[+-]?\d+[.]\d+$/? val : default
+        def self.normalise_float(val, default: 0, throw: false)
+          if val =~ /^[+-]?\d+[.]\d+$/
+            val
+          else
+            if throw
+              raise ArgumentError, "this doesn't look lik a float: #{val}"
+            else
+              default
+            end
+          end
         end
 
         # given a list of address parts via the parameters, try to
