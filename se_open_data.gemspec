@@ -11,8 +11,9 @@ Gem::Specification.new do |s|
   HERE
   s.authors     = ["Digital Commons Co-operative"]
   s.email       = 'tech.accounts@digitalcommons.coop'
-  s.files       =  Dir['lib/**/*.rb'] + Dir['bin/**'] + Dir['resources/**']
-  s.executables.concat %w(seod export-lime-survey vocab-json schema2schema)
+  # The twiddly [!~] bit at the end of these globs excludes emacs backup files
+  s.files       =  Dir['lib/**/*.rb'] + Dir['bin/**[!~]'] + Dir['resources/**[!~]']
+  s.executables.concat Dir.glob('*[!~]', base: 'bin')
   s.homepage    = 'https://github.com/DigitalCommons/se-open-data'
   s.metadata    = { "source_code_uri" => "https://github.com/DigitalCommons/se-open-data" }
 
