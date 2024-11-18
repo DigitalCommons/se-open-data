@@ -16,9 +16,9 @@ module SeOpenData
             val
           else
             if throw
-              raise ArgumentError, "malformed email: "+val
+              raise ArgumentError, "malformed email: '#{val}'"
             else
-              Log.info("This doesn't look like an email: #{val})")
+              Log.info("This doesn't look like an email: '#{val}'")
               default
             end
           end
@@ -48,9 +48,9 @@ module SeOpenData
           end
 
           if throw
-            raise ArgumentError, "This doesn't look like a website: #{str})"
+            raise ArgumentError, "This doesn't look like a website: '#{str}'"
           else
-            Log.info("This doesn't look like a website: #{str})")
+            Log.info("This doesn't look like a website: '#{str}'")
             return default
           end
         end
@@ -60,9 +60,10 @@ module SeOpenData
           items = [items] unless items.respond_to? :each
 
           items.each do |str|
-            Log.debug "Attempting to normalise Facebook URL: #{str}"
+            Log.debug "Attempting to normalise Facebook URL: '#{str}'"
             url = normalise_url(str.to_s, default: nil, full_url: true, throw: throw)
-              Log.info "Ignoring un-normalisable URL: #{str}"
+            if url.nil?
+              Log.info "Ignoring un-normalisable URL: '#{str}'"
               next
             end
             
@@ -82,11 +83,12 @@ module SeOpenData
             end
 
             if throw
-              raise ArgumentError, "non-Facebook URL: #{str}"
+              raise ArgumentError, "non-Facebook URL: '#{str}'"
             end
             
-            Log.info "Ignoring non-facebook URL: #{str}"
+            Log.info "Ignoring non-facebook URL: '#{str}'"
           end
+          
           return nil
         end
 
@@ -95,10 +97,10 @@ module SeOpenData
           items = [items] unless items.respond_to? :each
 
           items.each do |str|
-            Log.debug "Attempting to normalise Twitter URL: #{str}"
+            Log.debug "Attempting to normalise Twitter URL: '#{str}'"
             url = normalise_url(str.to_s, default: nil, full_url: true, throw: throw)
             if url.nil?
-              Log.info "Ignoring un-normalisable URL: #{str}"
+              Log.info "Ignoring un-normalisable URL: '#{str}'"
               next
             end
             
@@ -115,10 +117,10 @@ module SeOpenData
             end
             
             if throw
-              raise ArgumentError, "non-twitter URL: #{str}"
+              raise ArgumentError, "non-twitter URL: '#{str}'"
             end
             
-            Log.info "Ignoring non-twitter URL: #{str}"
+            Log.info "Ignoring non-twitter URL: '#{str}'"
           end
           return nil
         end
@@ -128,7 +130,7 @@ module SeOpenData
             val
           else
             if throw
-              raise ArgumentError, "this doesn't look lik a float: #{val}"
+              raise ArgumentError, "this doesn't look lik a float: '#{val}'"
             else
               default
             end
