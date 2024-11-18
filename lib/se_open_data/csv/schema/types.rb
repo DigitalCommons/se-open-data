@@ -145,7 +145,8 @@ module SeOpenData
             .select {|it| it != '' }
             .join(", ")
         end
-  
+
+        # converts a string to a valid ruby symbolic identifier
         def self.to_sym(str)
           parameterize(str.strip.downcase.tr('-','_'), separator: "_").to_sym
         end
@@ -186,6 +187,8 @@ module SeOpenData
           @@country_codes[:"#{code.to_s.upcase}"]
         end
 
+        # Turn a string into a parameter name
+        #
         # Borrowed from the Rails codebase
         def self.parameterize(string, separator: "-", preserve_case: false)
           # Replace accented chars with their ASCII equivalents.
