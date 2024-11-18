@@ -26,7 +26,14 @@ class Schema2Schema
 Converts a CSV schema from one format to another
 
 usage:
+
+Convert a schema into a different format, possibly specifying the ID / name etc.
+
    #{cmd} --id <ID> --name <NAME> [<ARGS>]  <input file> <output file>
+
+Convert a built-in schema to a different format
+
+   #{cmd} --from <standard|limequery>[:integer] <NAME> [<ARGS>] <output file>
 
 Where:
 
@@ -34,7 +41,7 @@ Where:
  - <output file> is the path to a schema file to write, likewise
  - <ID> is the symbolic ID to use for the schema (must be a lowercase alphanumeric 
    identifier with no spaces
-
+- --from specifies the version of a built-in schema
  - <ARGS> can be any of the options:
    - --name <NAME> - supplying a name for the schema (defaults to the file basename if not
       set in the input schema)
