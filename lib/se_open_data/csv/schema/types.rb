@@ -148,6 +148,22 @@ module SeOpenData
             .join(", ")
         end
 
+        # Searches an international vocab for a description, returns the term
+        # The search can optionally be limited to a language
+        def self.identify_vocab(text, i18n_vocab, lang: nil)
+          target = to_sym(text)
+          lang = lang.to_s.downcase
+          i18n_vocab.each do |code, vocab|
+            next if lang && lang != code.to_s.downcase
+            raise "can't find vocab terms element" unless terms = vocab["terms"]
+            
+            terms.each do |term, descr|
+              return term if target == to_sym(descr)
+            end
+          end
+          return
+        end
+        
         # converts a string to a valid ruby symbolic identifier
         def self.to_sym(str)
           parameterize(str.to_s.strip.downcase.tr('-','_'), separator: "_").to_sym
