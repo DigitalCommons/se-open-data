@@ -150,7 +150,7 @@ module SeOpenData
 
         # converts a string to a valid ruby symbolic identifier
         def self.to_sym(str)
-          parameterize(str.strip.downcase.tr('-','_'), separator: "_").to_sym
+          parameterize(str.to_s.strip.downcase.tr('-','_'), separator: "_").to_sym
         end
         
         # Splits the field by the given delimiter, passes to the block for mapping,
