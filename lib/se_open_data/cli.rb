@@ -3,6 +3,7 @@ require "shellwords"
 require "pathname"
 require "se_open_data/utils/log_factory"
 require "se_open_data/utils/deployment"
+require "uri"
 
 module SeOpenData
   class Cli
@@ -640,6 +641,10 @@ DOCS
     end
 
     @@command_deploy_desc = 'Deploys the generated data on a web server.'
+    @@command_deploy_param_docs = {
+      owner: "set the deployed files' owner",
+      group: "set the deployed files' group",
+    }
     @@command_deploy_docs = <<DOCS
 Expects the generated data to have been created already by the
 `generate` command, in the directory defined by the WWW_DIR configuration.
@@ -650,20 +655,40 @@ DEPLOYMENT_WEB_USER and DEPLOYMENT_WEB_GROUP.
 
 Before the deployment proceeds, the directory defined by
 DEPLOYMENT_WEBROOT is checked for pre-existance.
+
+If the --owner or --group options are absent, the owner and group to set
+deployed files to are taken from te configuration. If either of these
+options are present with arguments, that defines the owner or group names to
+use. If the options are present without arguments, the current user or group
+is used.
 DOCS
-    # Deploys the generated data on a web server.
-    #
-    def self.command_deploy
+    def self.command_deploy(uri = nil, owner: :config, group: :config)
+
       config = load_config
       to_serv = config.respond_to?(:DEPLOYMENT_SERVER) ? config.DEPLOYMENT_SERVER : nil
+      to_dir = config.DEPLOYMENT_DOC_DIR
 
+      owner = config.DEPLOYMENT_WEB_USER if owner == :config
+      group = config.DEPLOYMENT_WEB_GROUP if group == :config
+
+      if uri
+        uri = URI(uri)
+        case uri.scheme
+        when 'rsync', 'file', nil
+          to_serv = uri.host
+          to_dir = uri.path
+        else
+          throw "unsupported uri scheme: #{uri.to_s}"
+        end
+      end
+      
       deploy(
         to_server: to_serv,
-        to_dir: config.DEPLOYMENT_DOC_DIR,
+        to_dir: to_dir,
         from_dir: config.GEN_DOC_DIR,
         ensure_present: config.DEPLOYMENT_WEBROOT,
-        owner: config.DEPLOYMENT_WEB_USER,
-        group: config.DEPLOYMENT_WEB_GROUP,
+        owner: owner,
+        group: group,
       )
       return true
     end
