@@ -37,12 +37,13 @@ module SeOpenData
       end
     end
 
-    # Runs all the steps required to download and redeploy data.
-    #
-    # If any step fails to return success, it stops and subsequent
-    # steps are not executed.
-    #
-    # @return true if all steps succed, false if any fail.
+    @@command_run_all_desc = 'Runs all the steps required to download and redeploy data.'
+    @@command_run_all_docs = <<DOCS
+If any step fails to return success, it stops and subsequent steps are
+not executed.
+
+Returns true if all steps succed, false if any fail.
+DOCS
     def self.command_run_all
       %w(download convert generate deploy triplestore post_success).each do |name|
         Log.info "Running command #{name}"
@@ -55,8 +56,10 @@ module SeOpenData
       return true
     end
 
-    # Removes all the generated files in the directory set by
-    # {SeOpenData::Config} value `TOP_OUTPUT_DIR`
+    @@command_clean_desc = 'Removes all the generated files in the output dierctory'
+    @@command_clean_docs = <<DOCS
+This output directory is set by the {SeOpenData::Config} value `TOP_OUTPUT_DIR`
+DOCS
     def self.command_clean
       config = load_config
       Log.info "Deleting #{config.TOP_OUTPUT_DIR} and any contents."
@@ -64,6 +67,21 @@ module SeOpenData
       return true
     end
 
+    @@command_limesurvey_export_desc = 'Obtains new data from limesurvey.'
+    @@command_limesurvey_export_docs = <<DOCS
+The downloads CSV data from the Lime Survey API.
+
+Relevant configuration values are:
+- `LIMESURVEY_SERVICE_URL` - the URL of the LimeSurvey API endpoint
+- `LIMESURVEY_SURVEY_ID` - the ID of the survey to download
+- `LIMESURVEY_USER` - the user name to authenticate with
+- `LIMESURVEY_PASSWORD_PATH` - a path to give to `pass` command
+   which will decrypt the password to authenticate with.
+
+Returns true on success, 100 if there is no new data, or false
+on failure.  Although currently there is no way to detect when
+data has changed, so this method never returns 100.
+DOCS
     # Obtains new data from limesurvey.
     #
     # This method is designed to offer one implementation for the
@@ -147,6 +165,14 @@ module SeOpenData
       return true
     end
 
+    @@command_http_download_desc = 'Obtains new data from an HTTP URL'
+    @@command_http_download_docs = <<DOCS
+The URL is defined by the configuration option DOWNLOAD_URL, and it is
+written to the directory defined by SRC_CSV_DIR
+
+Returns true on success, 100 if there is no new data, or false on
+failure.
+DOCS
     # Obtains new data from an HTTP URL
     #
     # This method is designed to offer one implementation for the
@@ -232,7 +258,13 @@ module SeOpenData
       IO.write original_csv, fetch(config.DOWNLOAD_URL)
       return true
     end
- 
+
+    @@command_etag_desc = 'Checks and updates the ETAG header recorded for the original data file'
+    @@command_etag_doc = <<DOCS
+Sends a HEAD request to the configured data source at DOWNLOAD_URL,
+and stores the ETAG header in a file adjacent to it, but with the
+.etag suffix, for comparison with future download attempts.
+DOCS
     def self.command_etag
       # Find the config file...
       config = load_config
@@ -242,6 +274,16 @@ module SeOpenData
       return true
     end
  
+    @@command_download_desc = 'Runs the `downloader` script to get new data'
+    @@command_download_docs = <<DOCS
+The script, if present, should be called `downloader` and be in the
+current directory.
+
+Does nothing if it is absent.
+
+May require authentication credentials to be configured for the
+download to be successful.
+DOCS
     # Obtains new data by running the `downloader` script in the
     # current directory, if present
     #
@@ -277,6 +319,17 @@ module SeOpenData
       end
     end
 
+    @@command_convert_desc = 'Run the `converter` script to normalise the original data'
+    @@command_convert_docs = <<DOCS
+The script should be called `converter` and be in the current
+directory. It must be present.
+
+The script should read the file with a the name defined by
+ORIGINAL_CSV from the directory defined by SRC_CSV_DIR.
+
+The result should be written to the file name defined by STANDARD_CSV,
+in the directory named by TOP_OUTPUT_DIR.
+DOCS
     # Runs the `converter` script in the current directory, if present
     #
     # Note, although typically we expect the script to be written in
@@ -304,6 +357,12 @@ module SeOpenData
       return invoke_script("converter")
     end
 
+    @@command_generate_digest_index_desc = 'Scan the STANDARD_CSV file and generate a DIGEST_INDEX file'
+    @@command_generate_digest_index_docs = <<DOCS
+DIGEST_INDEX is a tab-delimited file with two columns: "Key" and
+"Digest".  It represents the state each row, indicated by the
+key, with a digest, allowing changes to be inferred generically.
+DOCS
     # Scan the STANDARD_CSV and generate a DIGEST_INDEX
     #
     # DIGEST_INDEX is a tab-delimited file with two columns: "Key" and
@@ -344,6 +403,16 @@ module SeOpenData
       return digest_index.index.size
     end
 
+    @@command_generate_vocab_index_desc = 'Generates a vocab index file'
+    @@command_generate_vocab_index_docs = <<DOCS
+This vocab index is a JSON file containing a look-up table of
+abbreviated SKOS vocab URIs to human-language labels in various
+languages, defined by the config, and obtained from one or more
+SKOS vocab files. It can be used by mykomap to define
+vocabularies AKA taxonomies used in the data.
+
+The name is defined by VOCAB_INDEX_FILE, and it is written to GEN_DOC_DIR.
+DOCS
     # Generate a vocab index
     #
     # This index is a JSON file containing a look-up table of
@@ -389,6 +458,17 @@ module SeOpenData
       return true
     end
 
+    @@command_generate_rdf_desc = 'Generate the RDF data'
+    @@command_generate_rdf_docs = <<DOCS
+These are Turtle, XML/RDF and HTML files, one per initiative.
+They all contain approximately the same data in a different
+form. The HTML embeds the TTL, CSV and XML formats in a form
+which can be displayed in a browser.
+
+The files are written into the directory set by
+config.GEN_DOC_DIR, and with a name set by the initiative
+Identifier field, and a suffix indicating the type.
+DOCS
     # Generate the RDF data
     #
     # These are Turtle, XML/RDF and HTML files, one per initiative.
@@ -464,6 +544,18 @@ module SeOpenData
       return true
     end
     
+    @@command_generate_desc = 'Generates the static data in `WWW_DIR` and `GEN_SPARQL_DIR`'
+    @@command_generate_doc = <<DOCS
+Expects normalised data to have been generated by the `convert`
+command, as described in the documentation for that method.
+
+Transforms this into (typically but not necessarily) static linked
+open data files for publishing, along with the normalised CSV file and
+some other metadata. This is then ready to be deployed on a web server.
+
+See the documentation in {SeOpenData::Cli.command_generate} for more
+details of the output files.
+DOCS
     # Generates the static data in `WWW_DIR` and `GEN_SPARQL_DIR`
     #
     # Expects data to have been generated by {self.command_convert},
@@ -486,8 +578,7 @@ module SeOpenData
     #
     # Other .rq query files may exist, depending on the application.
     #
-    # FIXME what defines the requirements of the data generated by the
-    # query?
+    # FIXME what defines the requirements of the data generated by the query?
     def self.command_generate
       require 'se_open_data/vocab_to_index'
       require "json"
@@ -548,6 +639,18 @@ module SeOpenData
       return true
     end
 
+    @@command_deploy_desc = 'Deploys the generated data on a web server.'
+    @@command_deploy_docs = <<DOCS
+Expects the generated data to have been created already by the
+`generate` command, in the directory defined by the WWW_DIR configuration.
+
+The destination path, and (optionally) host and ownership are defined
+in the configuration, by DEPLOYMENT_SERVER, DEPLOYMENT_DOC_DIR,
+DEPLOYMENT_WEB_USER and DEPLOYMENT_WEB_GROUP.
+
+Before the deployment proceeds, the directory defined by
+DEPLOYMENT_WEBROOT is checked for pre-existance.
+DOCS
     # Deploys the generated data on a web server.
     #
     def self.command_deploy
@@ -565,6 +668,31 @@ module SeOpenData
       return true
     end
 
+    @@command_triplestore_desc = 'Uploads the linked-data graph to a Virtuoso triplestore server'
+    @@command_triplestore_docs = <<DOCS
+Expects the generated data to have been created already by the
+`generate` command, in the directory defined by the GEN_SPARQL_DIR
+configuration.
+
+        to_dir: config.VIRTUOSO_DATA_DIR,
+        from_dir: config.GEN_VIRTUOSO_DIR,
+        ensure_present: config.VIRTUOSO_ROOT_DATA_DIR,
+        owner: config.VIRTUOSO_USER,
+        group: config.VIRTUOSO_GROUP,
+
+The destination Virtuoso server defined by VIRTUOSO_SERVER, or if
+absent may be the local host. Data is imported to the triplestore by
+dumping the data in GEN_VIRTUOSO_DIR into the dirctory
+VIRTUOSO_DATA_DIR on that host, with ownership defined by
+VIRTUOSO_USER and VIRTUOSO_GROUP.
+
+Before the deployment proceeds, the directory defined by
+VIRTUOSO_ROOT_DATA_DIR is checked for pre-existance.
+
+An import script is generated as part of the dump, which can be run
+manually to perform the import, or run locally if AUTO_LOAD_TRIPLETS
+is defined and an appropriate password defined.
+DOCS
     # Uploads the linked-data graph to the Virtuoso triplestore server
     def self.command_triplestore
       require "se_open_data/utils/password_store"
@@ -654,9 +782,24 @@ HERE
       raise e
     end
 
+    @@command_post_success_desc = 'Runs a `post_success` script in the current directory, if present.'
+    @@command_post_success_docs = <<DOCS
+The `post_success` script's purpose is to allow arbitrary
+post-success operations to be added, such as notifications to
+other systems.  It should only be run after successful
+completion, and not if any step failed.
+
+Note, although typically we expect the script to be written in
+Ruby and use the SeOpenData library, we don't assume that and
+invoke it as a separate process, to allow other languages and
+tools to be used.
+
+Returns true on success, false if there was failure, nil to
+indicate there is no `post_success` script.
+DOCS
     # Runs the `post_success` script in the current directory, if present.
     #
-    # The post_success command is intended to allow arbitrary
+    # The post_success script's purpose is to allow arbitrary
     # post-success operations to be added, such as notifications to
     # other systems.  It should only be run after successful
     # completion, and not if any step failed.
@@ -675,6 +818,21 @@ HERE
       end
     end
 
+    @@command_murmurations_registration_desc = 'Register published initiatives on a Murmurations index.'
+    @@command_murmurations_registration_docs = <<DOCS
+Attempts to register or remove initiatives published via the `deploy`
+command with the configured murmurations index server.
+
+Murmurations is a decentralised protocol for the publishing and
+discovery of resources.
+
+The data should have been previously published using the `deploy`
+command.
+
+Returns false on outright failure, or an integer value on (partial)
+success, indicating the number of failed registrations/removals. Zero
+is complete success, and any other number indicates partial success.
+DOCS
     # Attempts to register or remove initiatives published in a web
     # directory with the configured murmurations index server.
     #
