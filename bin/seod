@@ -10,33 +10,36 @@
 
 require_relative '../lib/load_path'
 require 'se_open_data/cli'
+require 'optparse'
 
 seod = File.basename(__FILE__)
+commands = SeOpenData::Cli.public_methods.filter do |method|
+  method.start_with? 'command_'
+end.map do |method|
+  method[8..]
+end.sort
+
+def class_var(name)
+  var = "@@#{name}"
+  if SeOpenData::Cli.class_variable_defined? var
+    SeOpenData::Cli.class_variable_get var
+  else
+    nil
+  end
+end
+
 usage = <<USAGE
 usage:
    #{seod} <command>
 
 Where <command> can be:
 
-- download
-- convert
-- generate
-- generate_digest_index
-- generate_murmurations_profiles
-- generate_vocab_index
-- generate_rdf
-- deploy
-- triplestore
-- post_success
-- run_all
-- murmurations_registration
-- limesurvey_export
-- clean
-- help
+#{commands.map {|c| "- #{c}: #{class_var('command_'+c+'_desc') || ''}"}.join("\n")}
+- help: print this help
 
 The operation of this script is configured by one or more
 configuration files, and by appropriately named scripts, both located
-in the current directory from which this command is run. 
+in the current directory from which this command is run.
 
 The environment variable `SEOD_CONFIG` can be defined to name the
 config file which `#{seod}` should use. If it is not set, `local.conf`
@@ -120,18 +123,103 @@ URIs are used in both cases, but different destinations are defined.
 
 DOCS
 
-
+# Parse the options
 command, *rest = ARGV
-abort usage unless command && rest.size == 0
+abort usage unless command
 
-abort usage+docs if command == 'help'
-
-method = "command_#{command}".to_sym
-abort usage unless SeOpenData::Cli.respond_to? method
-
-puts "invoking command: #{command}"
+params = []
+options = {}
+command_method = nil
 begin
-  exit SeOpenData::Cli.send(method)
+  min_params = 0
+  max_params = 0
+  command_method = SeOpenData::Cli.public_methods.find do |sym|
+    sym.to_s == "command_#{command}"
+  end
+  abort usage+docs if command == 'help'
+  abort usage unless command_method
+
+  params = SeOpenData::Cli.method(command_method).parameters
+  param_docs = class_var "#{command_method}_param_docs"
+  param_docs = {} unless param_docs.is_a? Hash
+
+  # Options parser construction
+  op = OptionParser.new do |opts|
+    opts.program_name = seod
+
+    params.each do |param|
+      (type, name) = param
+      next unless name # Ignore unnamed parameters
+
+      lcname = name.to_s.downcase
+      ucname = lcname.upcase
+      case type
+      when :keyreq
+        opts.on("--#{lcname} #{ucname}", param_docs[name]) {|v| options[name] = v }
+      when :key
+        opts.on("--#{lcname} [#{ucname}]", param_docs[name]) {|v| options[name] = v }
+      when :req
+        min_params += 1
+        max_params += 1 if max_params >= 0
+      when :opt
+        max_params += 1 if max_params >= 0
+      when :rest
+        max_params = -1 # no limit
+      else
+        raise "unexpected: unsupported parameter type #{type} for #{name} "+
+              "in command method SeOpenData::Cli.#{command_method}"
+      end
+    end
+
+    opts.define_tail("-h", "--help", "print this help") do
+      puts <<EOF
+#{class_var("#{command_method}_desc") || ''}
+
+Usage:
+
+   #{seod} #{command} [options] [args]
+
+Where [options] can be:
+
+EOF
+      puts opts.summarize
+      puts
+
+      case max_params
+      when -1
+        puts "And [args] can be any number of parameters, but at least #{min_params}."
+      when 0
+        puts "There are no arguments [args] allowed for this command"
+      else
+        if max_params == min_params
+          puts "And [args] must be #{min_params} parameters."
+        else
+          puts "And [args] must be at minimum #{min_params}, at most #{max_params} parameters."
+        end
+      end
+
+      puts
+      puts class_var("#{command_method}_docs") || ''
+      abort
+    end
+  end
+
+  # This actually parses the options
+  params = op.parse(rest)
+
+  # Check the resulting parameters are in the right range
+  raise "there must be at least #{min_params} parameters (given #{params.size})" unless
+    params.size >= min_params
+  raise "there must not be more than #{max_params} parameters (given #{params.size})" if
+    max_params >= 0 && params.size > max_params
+
+rescue => e
+  abort "When invoking #{command}, #{e}\nCheck seod #{command} --help for guidance."
+end
+
+puts "invoking command: #{command_method} #{params.inspect} #{options.inspect}"
+begin
+  exit SeOpenData::Cli.send(command_method, *params, **options)
 rescue => e
   warn e.message
   warn e.backtrace.join("\n")
