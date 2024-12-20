@@ -6,14 +6,14 @@
 #
 # FIXME expand
 #
-# FIXME dynamically generate documentation from SeOpenData::Cli reflection
+# FIXME dynamically generate documentation from SeOpenData::CliHelper reflection
 
 require_relative '../lib/load_path'
 require 'se_open_data/cli'
 require 'optparse'
 
 seod = File.basename(__FILE__)
-commands = SeOpenData::Cli.public_methods.filter do |method|
+commands = SeOpenData::CliHelper.public_methods.filter do |method|
   method.start_with? 'command_'
 end.map do |method|
   method[8..]
@@ -21,8 +21,8 @@ end.sort
 
 def class_var(name)
   var = "@@#{name}"
-  if SeOpenData::Cli.class_variable_defined? var
-    SeOpenData::Cli.class_variable_get var
+  if SeOpenData::CliHelper.class_variable_defined? var
+    SeOpenData::CliHelper.class_variable_get var
   else
     nil
   end
@@ -61,7 +61,7 @@ For more information, read the inline documentation in `#{seod}`, here:
     #{__FILE__}
 
 See also documentation for the modules `SeOpenData::Config` and
-`SeOpenData::Cli`.
+`SeOpenData::CliHelper`.
 
 USAGE
 
@@ -72,7 +72,7 @@ There are currently two scripts which if defined are used to implement
 case-specific logic, for the `download` and `convert` commands,
 respectvely. The logic can be completely custom for each
 case. However, whenever possible, it is recommended that they simply
-invoke general routines from the SeOpenData::Cli module. See that for
+invoke general routines from the SeOpenData::CliHelper module. See that for
 more information.
 
 - `downloader`: if present, it should update the original data
@@ -135,7 +135,7 @@ begin
   # a hash, in which the behavior is deduced from introspecting the
   # corresponding method's parameters as follows:
   #
-  # - The corresponding method is the class method in SeOpenData::Cli
+  # - The corresponding method is the class method in SeOpenData::CliHelper
   #   matching the command prefixed with 'command_'
   # - Method parameters which are required increment minimum and maximum
   #   non-option arguments expected on the command line
@@ -152,13 +152,13 @@ begin
   
   min_params = 0
   max_params = 0
-  command_method = SeOpenData::Cli.public_methods.find do |sym|
+  command_method = SeOpenData::CliHelper.public_methods.find do |sym|
     sym.to_s == "command_#{command}"
   end
   abort usage+docs if command == 'help'
   abort usage unless command_method
 
-  params = SeOpenData::Cli.method(command_method).parameters
+  params = SeOpenData::CliHelper.method(command_method).parameters
   param_docs = class_var "#{command_method}_param_docs"
   param_docs = {} unless param_docs.is_a? Hash
 
@@ -182,6 +182,7 @@ begin
                           else
                             v
                           end
+        end
       when :req
         min_params += 1
         max_params += 1 if max_params >= 0
@@ -191,7 +192,7 @@ begin
         max_params = -1 # no limit
       else
         raise "unexpected: unsupported parameter type #{type} for #{name} "+
-              "in command method SeOpenData::Cli.#{command_method}"
+              "in command method SeOpenData::CliHelper.#{command_method}"
       end
     end
 
@@ -243,7 +244,7 @@ end
 
 puts "invoking command: #{command_method} #{params.inspect} #{options.inspect}"
 begin
-  exit SeOpenData::Cli.send(command_method, *params, **options)
+  exit SeOpenData::CliHelper.send(command_method, *params, **options)
 rescue => e
   warn e.message
   warn e.backtrace.join("\n")

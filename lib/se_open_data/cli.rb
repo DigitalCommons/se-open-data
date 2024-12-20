@@ -6,7 +6,7 @@ require "se_open_data/utils/deployment"
 require "uri"
 
 module SeOpenData
-  class Cli
+  class CliHelper
     # Create a log instance
     Log = SeOpenData::Utils::LogFactory.default
 
@@ -102,7 +102,7 @@ DOCS
     #     # true), failed (1 or false), or was just skipped because
     #     # there is no new data (return code 100)
     #     
-    #     exit SeOpenData::Cli.command_limesurvey_export if __FILE__ == $0
+    #     exit SeOpenData::CliHelper.command_limesurvey_export if __FILE__ == $0
     #
     # Then the source of the data would be configured using one of the
     # standard config files (`default.conf`, `local.conf` etc., @see
@@ -130,7 +130,7 @@ DOCS
     #     ./downloader
     #
     # As well as via the {SeOpenData} library's command-line API
-    # {SeOpenData::Cli}:
+    # {SeOpenData::CliHelper}:
     #
     #     seod download
     #
@@ -193,7 +193,7 @@ DOCS
     #     # true), failed (1 or false), or was just skipped because
     #     # there is no new data (return code 100)
     #     
-    #     exit SeOpenData::Cli.command_http_download if __FILE__ == $0
+    #     exit SeOpenData::CliHelper.command_http_download if __FILE__ == $0
     #
     # Then the source of the data would be configured using one of the
     # standard config files (`default.conf`, `local.conf` etc., @see
@@ -211,7 +211,7 @@ DOCS
     #     ./downloader
     #
     # As well as via the {SeOpenData} library's command-line API
-    # {SeOpenData::Cli}:
+    # {SeOpenData::CliHelper}:
     #
     #     seod download
     #
@@ -554,7 +554,7 @@ Transforms this into (typically but not necessarily) static linked
 open data files for publishing, along with the normalised CSV file and
 some other metadata. This is then ready to be deployed on a web server.
 
-See the documentation in {SeOpenData::Cli.command_generate} for more
+See the documentation in {SeOpenData::CliHelper.command_generate} for more
 details of the output files.
 DOCS
     # Generates the static data in `WWW_DIR` and `GEN_SPARQL_DIR`

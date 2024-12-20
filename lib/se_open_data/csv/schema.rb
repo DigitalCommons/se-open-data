@@ -842,7 +842,7 @@ module SeOpenData
 # library.
 #
 # This script can be invoked directly, or as part of the {SeOpenData}
-# library's command-line API {SeOpenData::Cli}. For example, this
+# library's command-line API {SeOpenData::CliHelper}. For example, this
 # just runs the conversion step (or specifically: a script in the
 # current directory called `converter`):
 #
@@ -854,7 +854,7 @@ module SeOpenData
 #
 #     seod run-all
 #
-# See the documentation on [`seod`]({SeOpenData::Cli}) for more
+# See the documentation on [`seod`]({SeOpenData::CliHelper}) for more
 # information.
 
 require 'se_open_data/setup'
