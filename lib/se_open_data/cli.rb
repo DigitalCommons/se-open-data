@@ -656,21 +656,27 @@ DEPLOYMENT_WEB_USER and DEPLOYMENT_WEB_GROUP.
 Before the deployment proceeds, the directory defined by
 DEPLOYMENT_WEBROOT is checked for pre-existance.
 
-If the --owner or --group options are absent, the owner and group to set
-deployed files to are taken from te configuration. If either of these
-options are present with arguments, that defines the owner or group names to
-use. If the options are present without arguments, the current user or group
-is used.
+If the --owner or --group options are supplied with an argument, it
+defines the owner or group names set deployed files to. If the options
+are present without arguments, the current user or group is used. If
+absent, values are taken from the configuration.
 DOCS
-    def self.command_deploy(uri = nil, owner: :config, group: :config)
+    def self.command_deploy(uri = nil, owner: nil, group: nil)
 
       config = load_config
       to_serv = config.respond_to?(:DEPLOYMENT_SERVER) ? config.DEPLOYMENT_SERVER : nil
       to_dir = config.DEPLOYMENT_DOC_DIR
 
-      owner = config.DEPLOYMENT_WEB_USER if owner == :config
-      group = config.DEPLOYMENT_WEB_GROUP if group == :config
+      case owner
+      when nil then owner = config.DEPLOYMENT_WEB_USER
+      when true then owner = nil # use current
+      end
 
+      case group
+      when nil then group = config.DEPLOYMENT_WEB_GROUP
+      when true then group = nil # use current
+      end
+      
       if uri
         uri = URI(uri)
         case uri.scheme

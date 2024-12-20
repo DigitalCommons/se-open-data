@@ -131,6 +131,25 @@ params = []
 options = {}
 command_method = nil
 begin
+  # Note that the seod command option processing supplies options via
+  # a hash, in which the behavior is deduced from introspecting the
+  # corresponding method's parameters as follows:
+  #
+  # - The corresponding method is the class method in SeOpenData::Cli
+  #   matching the command prefixed with 'command_'
+  # - Method parameters which are required increment minimum and maximum
+  #   non-option arguments expected on the command line
+  # - Method parameters which are optional increment the maximum only
+  # - Non-option command line parameters are supplied in order as strings, if these bounds are met
+  # - Keyword method parameters that are required will be required in the commmand line,
+  #   and get the argument as a string. An error will be triggered if they are absent.
+  # - Keyword method parameters that are optional will be optional in the command line,
+  #   and will get:
+  #    - the argument as a string if it is supplied
+  #    - a true value if the option is present with no argument
+  #    - nil otherwise.
+  #
+  
   min_params = 0
   max_params = 0
   command_method = SeOpenData::Cli.public_methods.find do |sym|
@@ -157,7 +176,12 @@ begin
       when :keyreq
         opts.on("--#{lcname} #{ucname}", param_docs[name]) {|v| options[name] = v }
       when :key
-        opts.on("--#{lcname} [#{ucname}]", param_docs[name]) {|v| options[name] = v }
+        opts.on("--#{lcname} [#{ucname}]", param_docs[name]) do |v|
+          options[name] = if v == nil
+                            true
+                          else
+                            v
+                          end
       when :req
         min_params += 1
         max_params += 1 if max_params >= 0
