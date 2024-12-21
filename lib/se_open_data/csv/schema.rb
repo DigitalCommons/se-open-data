@@ -54,7 +54,8 @@ module SeOpenData
           end
         end
       rescue => error
-        raise ArgumentError, "Field with index #{last_ix} cannot be normalised, #{error.message}"
+        raise ArgumentError, "Field with index #{last_ix} cannot be normalised, #{error.message}",
+              cause: error
       end
 
       
@@ -88,7 +89,8 @@ module SeOpenData
 
         return map if invalids.empty?
 
-        raise ArgumentError, "these header fields are invalid for this schema :#{@id}, #{headers}, because #{invalids.join('; ')}"
+        raise ArgumentError, "these header fields are invalid for this schema :#{@id}, #{headers}, because #{invalids.join('; ')}",
+              cause: error
       end
 
       # Checks whether this schema has is compatible with another.
@@ -619,7 +621,8 @@ module SeOpenData
           rescue => e
             raise ArgumentError, "error when converting element #{index} of data, "+
                                  "expected to have an input schema of :#{@from_schema.id}, "+
-                                 "and a output schema :#{@to_schema.id}, but: #{e.message}"
+                                 "and a output schema :#{@to_schema.id}, but: #{e.message}",
+                  cause: e
           end
         end
 
@@ -768,12 +771,14 @@ module SeOpenData
                   # missing keywords
                   raise ArgumentError,
                         "Observer#on_row implementation must consume remaining keyword "+
-                        "parameters for these '#{@from_schema.id}' schema field ids: #{match[2]}"
+                        "parameters for these '#{@from_schema.id}' schema field ids: #{match[2]}",
+                        cause: e
                 elsif match[1] == 'missing'
                   # unknown keywords
                   raise ArgumentError,
                         "Observer#on_row implementation's keyword parameters do not match "+
-                        "'#{@from_schema.id}' schema field ids: #{match[2]}"
+                        "'#{@from_schema.id}' schema field ids: #{match[2]}",
+                        cause: e
                 end
               else
                 raise
@@ -805,7 +810,8 @@ module SeOpenData
               enum_out << row
             end
           rescue => e
-            raise RuntimeError, "#{e.message}\nwhen parsing this row data:\n#{'%.160s' % id_hash}"
+            raise RuntimeError, "#{e.message}\nwhen parsing this row data:\n#{'%.160s' % id_hash}",
+                  cause: e
           end
         end
 
