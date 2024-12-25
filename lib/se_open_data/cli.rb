@@ -30,7 +30,7 @@ DOCS
       %w(download convert generate deploy triplestore post_success).each do |name|
         Log.info "Running command #{name}"
         rc = send name.to_sym
-        if rc != true && rc != 0
+        if rc != true and rc != 0
           Log.error "stopping, #{name} failed"
           return false
         end
@@ -582,7 +582,7 @@ DOCS
         # Note, an empty etag means there is no etag, so we should
         # not inhibit the download in that case.
         old_etag = IO.read(etag_file).strip
-        if old_etag != '' && old_etag == etag
+        if old_etag != '' and old_etag == etag
           Log.warn "No new data"
           return 100
         end
