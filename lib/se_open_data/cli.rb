@@ -132,7 +132,7 @@ DOCS
         case uri.scheme
         when 'rsync', 'file', nil
           to_serv = uri.host
-          to_dir = uri.path
+          to_dir = File.join(uri.path, config.URI_PATH_PREFIX)
         else
           throw "unsupported uri scheme: #{uri.to_s}"
         end
