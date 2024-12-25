@@ -45,7 +45,7 @@ DOCS
     def clean
       config = load_config
       Log.info "Deleting #{config.TOP_OUTPUT_DIR} and any contents."
-      FileUtils.rm_rf config.TOP_OUTPUT_DIR
+      FileUtils.rm_rf config.TOP_OUTPUT_DIR, secure: true
       return true
     end
 
@@ -263,10 +263,10 @@ DOCS
       # e.g. dates, and can't spot spurious junk left in the directory
       # by manual copies etc.
       Log.info "recreating #{config.WWW_DIR}"
-      FileUtils.rm_rf config.WWW_DIR
+      FileUtils.rm_rf config.WWW_DIR, secure: true
       FileUtils.mkdir_p config.GEN_DOC_DIR # need this subdir
       
-      FileUtils.rm_rf config.GEN_SPARQL_DIR
+      FileUtils.rm_rf config.GEN_SPARQL_DIR, secure: true
       
 
       case invoke_script("generator", allow_absent: true)
