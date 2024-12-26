@@ -5,6 +5,7 @@ require "se_open_data/utils/log_factory"
 require "se_open_data/utils/deployment"
 require "uri"
 require "thor"
+require "erb"
 
 module SeOpenData
   # Defines the seod command cli interface, using Thor
@@ -872,112 +873,320 @@ DOCS
       end
     end
 
+    
+    desc 'triplestore', 'Bulk-imports the linked-data graph to a Virtuoso triplestore server.'
+    option :from,
+           lazy_default: :unset,
+           desc: "Sets the local folder from which files are sourced for the import."
+    option :datafiles,
+           type: :hash,
+           lazy_default: {},
+           desc: "Sets the list of supplementary files to download into the source directory."
+    option :base_published_url,
+           lazy_default: :unset,
+           desc: "Sets the base URI to prepend to supplementary files' source URLs, where relative,"    
 
-    desc 'triplestore', 'Uploads the linked-data graph to a Virtuoso triplestore server'
+    option :via,
+           lazy_default: :unset,
+           default: :default,
+           desc: "Sets (or disable) the path (local or an rsync:// URL) to copy data to before attempting an import."
+    option :require_via_dir,
+           lazy_default: :unset,
+           type: :numeric,
+           desc: "Sets the number of components of the target path which must exist before uploading."
+    option :remove_via_dir,
+           lazy_default: :unset,
+           type: :boolean,
+           desc: "If true, remove the target path after the process."
+    option :owner,
+           lazy_default: :unset,
+           desc: "Sets the intermediate destination files' owner."
+    option :group,
+           lazy_default: :unset,
+           desc: "Sets the intermediate destination files' group."
+    
+    option :auto_load_triplets,
+           lazy_default: :unset,
+           type: :boolean,
+           desc: "If true (the default), bulk-import the data."
+    option :graph_uri,
+           lazy_default: :unset,
+           desc: "Sets the graph URI to import the data into."
+    option :pattern,
+           lazy_default: :unset,
+           desc: "Sets which data filenames to import, using SQL 'like' pattern. Defaults to '*.rdf'."
+    option :password_id,
+           lazy_default: :unset,
+           desc: "Sets the identifier given the to password store to get the Virtuoso password."
+    option :dbuser,
+           lazy_default: :unset,
+           desc: "Sets the user to log into the Virtuoso database as when importing. Defaults to 'dba'"
+    option :password_from_env,
+           lazy_default: :unset,
+           desc: "Tell the password store module to use environment variable instead of `pass`"
+
     long_desc <<DOCS
-Expects the generated data to have been created already by the
-`generate` command, in the directory defined by the GEN_SPARQL_DIR
+Expects triples data files to have been generated already by the
+`generate` command, in a format that Virtuoso can import (typically
+TTL, RDF, or N3).
+
+By default some supplemental files are downloaded from the web into
+the same folder, and this requires the folder to be writable. However,
+this can be changed or disabled via the --datafiles option.
+
+The no-parameters version of this command gets all of its options from
+the configuration file, which sets an intermediate destination of the
+data files on the local or a remote server, from which the bulk-import
+is performed.
+
+The CLI parameters will override or alter the file-based
 configuration.
 
-The destination Virtuoso server defined by VIRTUOSO_SERVER, or if
-absent may be the local host. Data is imported to the triplestore by
-dumping the data in GEN_VIRTUOSO_DIR into the dirctory
-VIRTUOSO_DATA_DIR on that host, with ownership defined by
-VIRTUOSO_USER and VIRTUOSO_GROUP.
+The CLI parameter `--via` allows the intermediate destination to be
+altered or disabled (using `--no-via`), which means that the data can
+be imported directly from the source directory (if the virtuoso server
+is local and is configured to permit this with the `DirsAllowed`
+parameter in `virtuoso.ini`.
 
-Before the deployment proceeds, the directory defined by
-VIRTUOSO_ROOT_DATA_DIR is checked for pre-existance.
+Whether or not this intermediate directory needs to pre-exist or is
+created if absent is controlled by `--require_via_dir`. Whether it is
+deleted before the command exits is controlled by `--remove_via_dir`.
 
-An import script is generated as part of the dump, which can be run
-manually to perform the import, or run locally if AUTO_LOAD_TRIPLETS
-is defined and an appropriate password defined.
+It is also possible to disable the bulk import step using
+`--auto_load_triplets false`, which means that nothing is done but
+(optionally) download supplemental datafiles and deploy the resulting
+collection to the "intermediate" destination (which is therefore
+effectively the final destination).
+
+Otherwise, a password for the virtuoso server needs to be obtained,
+and the passwords store command `pass` is used for this by default. A
+`--password_id` option can override the default path configured to
+give `pass`.  The `--passwords_from_env` option can be set to switch
+to getting the password from an environment variable named
+`PASSWORD__<id>` where `<id>` is a symbolic representation of the
+password id: alphabetic characters are upper-cased, and sequences of
+non-numeric characters are converted to an underscore.
+
 DOCS
     # Uploads the linked-data graph to the Virtuoso triplestore server
+    #
+    # Aims to support a number of old and newer scenarios. The older cases
+    # were completely configuration based, but were inflexible in the case
+    # where deployment needed to fit with the host environment, in particular
+    # when the process was running as a normal user rather than a user with
+    # special privileges to write to directories owned by the webserver or the
+    # virtuoso database. 
+    #
+    # - Legacy cases, with no command-line arguments. Deploy is performed
+    #   as per the config file.
+    #   - Scenario 1: import to remote virtuoso server via remote bulk-imported copy
+    #     Requires DBA user password, ssh (+ probably root) access
+    #   - Scenario 2: import to local virtuoso server via bulk-imported copy
+    #     Requires DBA user password, root access
+    # - Newer scenarios supported with command-line arguments
+    #   - Scenario 3: import via custom location on remote server
+    #     Requires DBA user password, ssh and write access to destination folder only
+    #   - Scenario 3: import via custom location on local server
+    #     Requires DBA user password, and write access to destination folder only
+    #   - Scenario 4: import directly from source location on local server
+    #     Requires DBA user password, and (optionally) write access to source folder only
+    #   - Scenario 5: simply deploy files to a destination location on local or
+    #     remote server.  Requires write access to source folder only, optionally ssh access.
+    #
+    # All parameters taken from config, but usual behaviour is to
+    # bulk-upload locally/remotely via a temp dir below a configured base path.
+    # Password required.
+    #
+    # Scenario 2: custom bulk upload using configured base path
+    #
+    # As above but some values overridden
+    #
+    # Scenario 3: bulk upload directly from from_dir
+    #
+    # No copy then required.
+    #
+    # Scenario 4: no bulk upload
+    #
+    # This step just not performed
+
     def triplestore
-      require "se_open_data/utils/password_store"
+      require 'ostruct'
+      #abort options.inspect
 
-      config = load_config
+      px = OpenStruct.new
+      # Parameters for source data
+      px.from_dir = :unset
+      px.datafiles = :unset
+      px.base_published_url = :unset
 
-      # This gets (encrypted) passwords. Read the documentation in the class.
-      pass = SeOpenData::Utils::PasswordStore.new(use_env_vars: config.USE_ENV_PASSWORDS)
-      Log.debug "Checking ENV for passwords" if pass.use_env_vars?
+      # Parameters for any intermediate destination
+      px.via_host = :unset
+      px.via_dir = :unset
+      px.ensure_via_dir = :unset
+      px.remove_via_dir = :unset
+      px.via_owner = :unset
+      px.via_group = :unset
 
-      datafiles = {
-        "vocab/" => "essglobal_vocab.rdf",
-        "standard/organisational-structure" => "organisational-structure.rdf",
-        "standard/activities" => "activities.rdf",
-        "standard/activities-ica" => "activities-ica.rdf",
-        "standard/activities-modified" => "activities-modified.rdf",
-        "standard/base-membership-type" => "base-membership-type.rdf",
-        "standard/qualifiers" => "qualifiers.rdf",
-        "standard/countries-iso" => "countries-iso.rdf",
-        "standard/regions-ica" => "regions-ica.rdf",
-        "standard/super-regions-ica" => "super-regions-ica.rdf",
-      }
-      datafiles.each do |src, dst|
-        content = fetch config.ESSGLOBAL_URI + src
-        IO.write File.join(config.GEN_VIRTUOSO_DIR, dst), content
+      # Parameters for the triplestore import
+      px.auto_load_triplets = :unset
+      px.graph_uri = :unset
+      px.pattern = :unset
+      px.password_id = :unset
+      px.dbuser = :unset
+      px.password_from_env = :unset
+
+      # Gather the config values and resolve the options and
+      # parameters above against it.
+      begin
+        config = load_config
+
+        begin # Parameters for the source data
+          px.from_dir = _opt :from, config.GEN_VIRTUOSO_DIR
+          px.base_published_url = _opt :base_published_url, config.ESSGLOBAL_URI
+          
+          px.datafiles = _opt :datafiles, {
+                                # legacy defaults
+                                "vocab/" => "essglobal_vocab.rdf",
+                                "standard/organisational-structure" => "organisational-structure.rdf",
+                                "standard/activities" => "activities.rdf",
+                                "standard/activities-ica" => "activities-ica.rdf",
+                                "standard/activities-modified" => "activities-modified.rdf",
+                                "standard/base-membership-type" => "base-membership-type.rdf",
+                                "standard/qualifiers" => "qualifiers.rdf",
+                                "standard/countries-iso" => "countries-iso.rdf",
+                                "standard/regions-ica" => "regions-ica.rdf",
+                                "standard/super-regions-ica" => "super-regions-ica.rdf",
+                              }
+        end
+        
+        begin # Parameters for the (optional) intermediate destination
+          
+          # Set via_host via_dir, and ensure_via_dir depending on whether
+          # via is set (implying the equivalent parameter passed)
+          case options[:via]
+          when nil # --no-via (no parameters supported)
+            # Don't use an intermediate destination
+            px.via_host = nil
+            px.via_dir = nil
+            px.ensure_via_dir = nil
+            px.remove_via_dir = nil
+          when :default, :unset # --via with no parameter, or no --via present
+            # legacy defaults
+            px.via_host = config.respond_to?(:VIRTUOSO_SERVER) ? config.VIRTUOSO_SERVER : nil
+            px.via_dir = config.VIRTUOSO_DATA_DIR if px.via_dir == :unset
+
+            px.ensure_via_dir =
+              case options[:require_via_dir]
+              when nil, :unset
+                config.VIRTUOSO_ROOT_DATA_DIR # legacy default
+              else
+                truncate_path(px.via_dir, options[:require_via_dir])
+              end
+            
+            px.remove_via_dir = _opt :remove_via_dir, true # legacy default
+            
+          else # A parameter passed, parse it
+            uri = URI(options[:via])
+
+            # Validate the scheme
+            case uri.scheme
+            when 'rsync', 'file', nil
+            else
+              throw "unsupported uri scheme: #{uri.to_s}"
+            end
+            
+            px.via_host = uri.host
+            px.via_dir = uri.path
+            require_via_dir = _opt :require_via_dir
+            px.ensure_via_dir = truncate_path(px.via_dir, require_via_dir)
+            px.remove_via_dir = _opt :remove_via_dir, false
+          end
+          
+          px.via_owner = case options[:owner]
+                         when nil, :unset then config.VIRTUOSO_USER # legacy default
+                         when '.' then nil # use current user
+                         else options[:owner]
+                         end
+          px.via_group = case options[:group]
+                         when nil, :unset then config.VIRTUOSO_GROUP # legacy default
+                         when '.' then nil # use current group
+                         else options[:group]
+                         end
+        end
+        
+        begin # Parameters for the import process
+          px.auto_load_triplets = _opt :auto_load_triplets, config.AUTO_LOAD_TRIPLETS
+          px.graph_uri = _opt :graph_uri, config.GRAPH_NAME
+          px.pattern = _opt :pattern, '*.rdf' # legacy default
+          px.password_id = _opt :password_id, config.VIRTUOSO_PASS_FILE
+          px.dbuser = _opt :dbuser, 'dba'
+          px.password_from_env = _opt :password_from_env, config.USE_ENV_PASSWORDS 
+        end
+      end
+
+      # Make sanity checks
+      #abort px.inspect
+      px.each_pair do |name, val|
+        if val == :unset
+          raise "implementation error, configuration incomplete:\n"+px.inspect
+        end
       end
       
-      Log.info "Creating #{config.VIRTUOSO_NAMED_GRAPH_FILE}"
-      IO.write config.VIRTUOSO_NAMED_GRAPH_FILE, config.GRAPH_NAME
+      # Download the required remote datafiles into from_dir
+      fetch_many dest_path: px.from_dir, items: px.datafiles, base_url: px.base_published_url
 
-      Log.info "Creating #{config.VIRTUOSO_SCRIPT_LOCAL}"
-
-      # Info about isql commands here:
-      # http://docs.openlinksw.com/virtuoso/virtuoso_clients_isql/
-      IO.write config.VIRTUOSO_SCRIPT_LOCAL, <<HERE
-#!/bin/sh
-
-password=${1?Please supply a password}
-
-isql-vt -H localhost -U dba -P "$password" <<SQL && rm -rf #{config.VIRTUOSO_DATA_DIR}
-SPARQL CLEAR GRAPH '#{config.GRAPH_NAME}';
-ld_dir('#{config.VIRTUOSO_DATA_DIR}','*.rdf',NULL);
-rdf_loader_run();
-
-select ll_file, ll_error from DB.DBA.load_list where ll_file like '#{config.VIRTUOSO_DATA_DIR}%' and ll_error is not null;
-select count(*) from DB.DBA.load_list where ll_file like '#{config.VIRTUOSO_DATA_DIR}%' and ll_error is not null;
-exit $if $gt $last[1] 0 1 not;
-sparql select count (*) from <#{config.GRAPH_NAME}> where {?s ?p ?o};
-exit $if $equ $last[1] 0 2 not;
-SQL
-
-HERE
-
-      to_serv = config.respond_to?(:VIRTUOSO_SERVER) ? config.VIRTUOSO_SERVER : nil
-      deploy_files(
-        to_server: to_serv,
-        to_dir: config.VIRTUOSO_DATA_DIR,
-        from_dir: config.GEN_VIRTUOSO_DIR,
-        ensure_present: config.VIRTUOSO_ROOT_DATA_DIR,
-        owner: config.VIRTUOSO_USER,
-        group: config.VIRTUOSO_GROUP,
-      )
-
-      if (config.AUTO_LOAD_TRIPLETS)
-        password = pass.get config.VIRTUOSO_PASS_FILE
-        Log.info autoload_cmd "<PASSWORD>", config
-        unless system autoload_cmd password, config # FIXME try to redirect output via log
-          raise "autoload triplets failed"
+      begin
+        if px.via_dir
+          deploy_files(
+            to_server: px.via_host, # only set if rsync:
+            to_dir: px.via_dir,
+            from_dir: px.from_dir,
+            ensure_present: px.ensure_via_dir,
+            owner: px.via_owner,
+            group: px.via_group,
+          )
         end
-      else
-        puts <<HERE
-****
-**** IMPORTANT! ****
-**** The final step is to load the data into Virtuoso with graph named #{config.GRAPH_NAME}.
-**** Execute the following command, providing the password for the Virtuoso dba user:
-****\t#{autoload_cmd "<PASSWORD>", config}
-HERE
+        
+        if px.auto_load_triplets
+          require "se_open_data/utils/password_store"      
+          
+          # This gets the database password from the encrypted password store, or
+          # from the environment
+          pass = SeOpenData::Utils::PasswordStore.new(use_env_vars: px.password_from_env)
+          Log.debug "Checking ENV for passwords" if px.password_from_env      
+          password = pass.get px.password_id
+          
+          # Attempt to bulk import the deployed triplets
+          
+          rc, output = bulk_import(
+                remote_host: px.via_host,
+                directory: px.via_dir || px.from_dir,
+                graph_uri: px.graph_uri,
+                pattern: px.pattern,
+                password: password,
+                user: px.dbuser,
+                raise_on_error: true
+              )
+          return rc
+        end
+
+      ensure # even on errors
+        
+        if px.via_dir && px.remove_via_dir
+          # remove the directory
+          if px.via_host
+            cmd = ['ssh', '-T', px.via_host, 'rm', '-rvf', px.via_dir]
+            Log.info cmd.inspect
+            system! *cmd
+          else
+            Log.info FileUtils.rm_r(px.via_dir, secure: true, verbose: true)
+          end
+        end
       end
-      return true
-    rescue => e
-      # Delete this output file
-      File.delete config.VIRTUOSO_SCRIPT_LOCAL if File.exist? config.VIRTUOSO_SCRIPT_LOCAL
-      raise e
+      
     end
 
-    # Shim for legacy usages of class command_ and other methods
+    # Shim for legacy usages of class command_* and other methods
     def self.method_missing(message, *args, **kwargs, &block)
       # Deal with command_methods which are now truncated and instance methods
       if message.start_with? 'command_'
@@ -1147,27 +1356,224 @@ HERE
     
     private
 
-    # generates the autoload command, with the given password
-    def autoload_cmd(pass, config)
-      command = "/bin/sh #{config.VIRTUOSO_SCRIPT_REMOTE} \"#{esc pass}\""
-      if !config.respond_to? :VIRTUOSO_SERVER
-        return command
+    # Gets an option by key, or a default
+    #
+    # Works around option defaults not being able to be nil (as this
+    # is interpreted as no default, and the name of the option is
+    # returned!). We set them to :, and this can be detected, and the
+    # default returned.
+    def _opt(key, default = nil)
+      if !options.has_key? key.to_s or options[key] == :unset
+        default
+      else
+        options[key]
       end
-
-      return <<-HERE
-ssh -T "#{esc config.VIRTUOSO_SERVER}" #{command}
-HERE
     end
 
     # escape double quotes in a string
-    def esc(string)
-      string.gsub('"', '\\"').gsub('\\', '\\\\')
+    def esc2(val)
+      val.to_s.gsub('"', '\\"').gsub('\\', '\\\\')
+    end
+
+    # escape single quotes in a string
+    def esc1(val)
+      val.to_s.gsub("'", "\\'").gsub('\\', '\\\\')
+    end
+
+    # URL-encode a string
+    def urlencode(string)
+      ERB::Util.url_encode(string)
+    end
+
+    # Run a command, capturing its output, printing it on failure.
+    def system!(*cmd, **kwargs)
+      out, status = Open3.capture2e(*cmd, **kwargs)
+      unless status.success?
+        raise "process failed with #{status.exitstatus}: #{cmd}\n#{out}"
+      end
+      status.success?
     end
 
     # Delegates to Deployment#deploy
     def deploy_files(**args)
-      Log.info "deploying to #{args.fetch(:to_server, 'localhost')}:#{args[:to_dir]}"
+      dest = [
+        args[:to_server],
+        args[:to_dir]
+      ].filter {|it| it.to_s != ""}.join(":")
+      Log.info "deploying to: #{dest}"
       SeOpenData::Utils::Deployment.new.deploy(**args)
+    end
+
+    # Checks if a string is a valid URL::HTTP (which includes HTTPS)
+    # Returns the URL if true, else nil
+    def valid_http_url?(value)
+      uri = begin URI(value); rescue; end 
+      if uri.is_a? URI::HTTP
+        uri
+      else
+        nil
+      end
+    end
+
+    # Checks if a string is a valid URL::HTTP (which includes HTTPS)
+    # Returns the URL if true, else raises an exception
+    def valid_http_url!(value)
+      uri = valid_http_url? value
+      return uri if uri
+      raise "Not a valid HTTP URL: #{value}"
+    end
+
+    # download multiple files from HTTP locations below base_url into dest_path
+    #
+    # dest_path - path to a pre-existing directory to download into
+    # items - an enumerable list of src, dst pairs. src can be a path or an URL.
+    # dst must be a file path relative to dest_path
+    # base_url - prepend this to src values which are paths, not URLs
+    def fetch_many(dest_path:, items:, base_url: )
+      base_url = valid_http_url! base_url
+
+      dest_path = File.expand_path(dest_path)
+      raise "Not a directory: #{dest_path}" unless Dir.exist? dest_path
+
+      items.each do |src, dst|
+        # Expand relative paths wrt the base_published_url
+        uri = begin URI(src); rescue; end # nil on errors
+        if uri.is_a? URI::HTTP
+        # Ok, but can't expand this, use as-is
+        elsif uri.is_a? URI::Generic and uri.host.to_s == "" # bare path
+          # Can expand this
+          src = base_url.merge(src).to_s
+        else
+          raise "Not a valid URL or path: #{src}"
+        end
+
+        # Download the content
+        dst = File.expand_path(dst, dest_path)
+        content = fetch src
+        unless dst.start_with? dest_path
+          raise "invalid destination, not below dest_path: #{{dst:, dest_path:}}"
+        end
+        Log.info "Writing #{dst}"
+        # FIXME check dst exists?
+        FileUtils.mkdir_p(File.dirname dst)
+        IO.write dst, content
+      end
+      
+      true
+    end
+
+    # Truncate a path
+    #
+    # Where level defines how to do this. It can be
+    # nil, true -> take all the path
+    # false -> take none of the path (so "" if relative, "/" if absolute)
+    # 1 or more -> take this many components from the beginning
+    # 0 or below -> remove this many components from the end 
+    def truncate_path(path, level)
+      pathname = Pathname(path)
+      case level
+      when nil, true
+        return path
+      when false
+        return pathname.absolute? ? "/" : ""
+      when Integer
+        components = *pathname.each_filename
+        level += components.size if level < 0
+        level = 0 if level < 0
+        path = File.join(components.take level)
+        return pathname.absolute? ? "/"+path : path
+      else
+        raise "Invalid parameter level: #{level}"
+      end
+    end
+    
+    # Bulk import pre-existing files to a (possibly remote) virtuoso server
+    #
+    # graph_uri - the graph uri to insert into
+    # user - the virtuoso user; defaults to 'dba'
+    # password - the virtuoso password
+    # pattern - like expression to match files to upload;
+    #  see https://docs.openlinksw.com/virtuoso/likepredicate/
+    # raise_on_error - set to true to trigger an exception on failure
+    # upload_dir - path to existing directory containing RDF files to bulk upload
+    # via - if set, files are transferred here and then uploaded from there there
+    # can be a path, or an URL with a file or rsync schema
+    # password - optional password for server. If omitted, upload is delegated
+    #
+    # returns an array of exit code and upload output from the upload command.
+    # the exit code is zero on success, a numeric return code otherwise
+    def bulk_import(
+          remote_host: nil,
+          directory: ,
+          graph_uri:,
+          pattern: '*',
+          user: 'dba',
+          password: nil,
+          raise_on_error: false
+        )
+      # Info about isql commands here:
+      # http://docs.openlinksw.com/virtuoso/virtuoso_clients_isql/
+      output = ''
+      result = nil
+      cmd = ['isql-vt', '-H', 'localhost', '-U', user,
+             'prompt=off', 'echo=off', 'verbose=off', 'banner=off', 'types=off']
+      cmd += ['-P', password] if password
+      cmd = ['ssh', '-T', remote_host] + cmd if remote_host
+      
+      graph_uri = URI(graph_uri)
+
+      Open3.popen2e(*cmd) do |stdin, stdouterr, wait_thr|
+        # Send the queries
+        from_dir = directory if directory
+        like_from_dir = from_dir.gsub(/%/, '[%]')+'%'
+
+        # see https://vos.openlinksw.com/owiki/wiki/VOS/VirtBulkRDFLoader
+        stdin << <<SQL
+echoln "Clearing log for '#{esc2 esc1 from_dir}', this seem to avoid lingering import failures";
+delete from DB.DBA.load_list where ll_file like '#{esc1 like_from_dir}%';
+
+echoln "Clearing graph <#{graph_uri}>";
+SPARQL CLEAR GRAPH '#{graph_uri}';
+echoln "Loading triples from '#{esc2 File.join(from_dir, pattern)}' into <#{esc2 graph_uri}>";
+ld_dir('#{esc1 from_dir}','#{esc1 pattern}','#{graph_uri}');
+rdf_loader_run();
+
+select ll_file, ll_error from DB.DBA.load_list where ll_file like '#{esc1 like_from_dir}' and ll_error is not null;
+echoln $if $gt $rowcnt 0 $last[1] "No errors.";
+
+echo "Existing errors which may need clearing: ";
+select count(*) from DB.DBA.load_list where ll_file like '#{esc1 like_from_dir}' and ll_error is not null;
+
+exit $if $gt $last[1] 0 1 not;
+
+echo "Number of triplets in graph <#{graph_uri}> (must be > 0): ";
+sparql select count (*) from <#{graph_uri}> where {?s ?p ?o};
+exit $if $equ $last[1] 0 2 not;
+
+echoln "Finished successfully.";
+SQL
+        stdin.close
+        result = wait_thr.value
+        #warn *stdouterr
+        stdouterr.each do |line|
+          output << line
+        end 
+
+      end
+      
+      if result == 0
+        Log.debug "successful import"
+        Log.debug output
+        return 0, output
+      else
+        if raise_on_error
+          raise "bulk import failed with result: #{result}\n"+output
+        else
+          Log.error("bulk import failed with result: "+result)
+          Log.error(output)
+          return result, output
+        end
+      end
     end
 
   end
