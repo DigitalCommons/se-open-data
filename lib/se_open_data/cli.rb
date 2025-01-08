@@ -22,16 +22,23 @@ module SeOpenData
     
     desc 'run_all', 'Run all the steps required to download and redeploy data.'
     long_desc <<DOCS
-If any step fails to return success, it stops and subsequent steps are
-not executed.
+Runs the commands with  no parameters by default, or with params supplied
+in an environment variable named for it, like `SEOD_<COMMAND>_PARAMS`, where
+<COMMAND> is the upper-cased command name.
+
+If any step fails to return success (if any are non-zero), it stops
+and subsequent steps are not executed.
 
 Returns true if all steps succeed, false if any fail.
 DOCS
     def run_all
-      %w(download convert generate deploy triplestore post_success).each do |name|
-        Log.info "Running command #{name}"
-        rc = send name.to_sym
-        if rc != true and rc != 0
+      %w(clean download convert generate deploy triplestore post_success).each do |name|
+        params_var = "SEOD_#{name.upcase.gsub(/\s+/, '_')}_PARAMS" # shouldn't be spaces, but JIC..
+        Log.info "Running command #{name} $#{params_var}"
+        params = ENV[params_var].to_s.split
+        Log.debug "Command params used for #{name}: #{params.inspect}"
+        rc = self.class.start([name] + params)
+        if rc != true and rc != 0 and rc != 100 # 100 means skipped, which is ok
           Log.error "stopping, #{name} failed"
           return false
         end
