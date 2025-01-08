@@ -10,4 +10,16 @@ require 'se_open_data/cli'
 # This is a Thor CLI. See Thor's documentation. Documentation metadata
 # defined in the SeOpenData::Cli class should be transformed into
 # command-line help when used.
-SeOpenData::Cli.start(ARGV)
+result = SeOpenData::Cli.start(ARGV)
+# Corral the result into an exit code
+exit case result
+     when true, nil
+       0
+     when false
+       1
+     when Numeric
+       result.to_i
+     else
+       -1 # something weird
+     end
+  
