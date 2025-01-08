@@ -1192,13 +1192,13 @@ DOCS
       if message.start_with? 'command_'
         new_message = message[8..]
         Log.info("Redirecting deprecated method #{self.name}.#{message} to ##{new_message}")
-        self.new.send(new_message.to_sym, *args, **kwargs, &block)
+        return self.new.send(new_message.to_sym, *args, **kwargs, &block)
       end
 
       # Send other methods which were moved to instance methods
       if self.method_defined? message
         Log.info("Redirecting deprecated method #{self.name}.#{message} to ##{message}")        
-        self.new.send(message, *args, **kwargs, &block)
+        return self.new.send(message, *args, **kwargs, &block)
       end
     end
 
