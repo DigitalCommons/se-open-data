@@ -25,7 +25,7 @@ module SeOpenData
 If any step fails to return success, it stops and subsequent steps are
 not executed.
 
-Returns true if all steps succed, false if any fail.
+Returns true if all steps succeed, false if any fail.
 DOCS
     def run_all
       %w(download convert generate deploy triplestore post_success).each do |name|
