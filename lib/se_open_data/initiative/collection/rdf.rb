@@ -19,6 +19,13 @@ module SeOpenData
 	      def initialize(collection, config)
 	        @collection, @config = collection, config
 	      end
+	      def save_index_ntriples(outdir)
+	        f = collection.index_filename(outdir, ".nt")
+	        Log.info "Saving #{f}..."
+	        ::RDF::NTriples::Writer.open(f) {|writer|
+	          writer << index_graph
+	        }
+	      end
 	      def save_index_rdfxml(outdir)
 	        f = collection.index_filename(outdir, ".rdf")
 	        Log.info "Saving #{f}..."
@@ -31,6 +38,13 @@ module SeOpenData
 	        Log.info "Saving #{f}..."
 	        ::RDF::Turtle::Writer.open(f, standard_prefixes: true, prefixes: config.prefixes) {|writer|
 	          writer << index_graph
+	        }
+	      end
+	      def save_one_big_ntriples
+	        f = collection.one_big_filename(config.one_big_file_basename, ".nt")
+	        Log.info "Saving #{f}..."
+	        ::RDF::NTriples::Writer.open(f) {|writer|
+	          writer << one_big_graph
 	        }
 	      end
 	      def save_one_big_rdfxml
