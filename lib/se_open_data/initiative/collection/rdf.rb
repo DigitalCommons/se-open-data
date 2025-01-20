@@ -33,14 +33,14 @@ module SeOpenData
 	          writer << index_graph
 	        }
 	      end
-	      def save_one_big_rdfxml(outdir)
+	      def save_one_big_rdfxml
 	        f = collection.one_big_filename(config.one_big_file_basename, ".rdf")
 	        Log.info "Saving #{f}..."
 	        ::RDF::RDFXML::Writer.open(f, standard_prefixes: true, prefixes: config.prefixes) {|writer|
 	          writer << one_big_graph
 	        }
 	      end
-	      def save_one_big_turtle(outdir)
+	      def save_one_big_turtle
 	        f = collection.one_big_filename(config.one_big_file_basename, ".ttl")
 	        Log.info "Saving #{f}..."
 	        ::RDF::Turtle::Writer.open(f, standard_prefixes: true, prefixes: config.prefixes) {|writer|

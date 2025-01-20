@@ -56,11 +56,11 @@ module SeOpenData
         Log.debug "Serialising initiative index as .ttl"
         rdf.save_index_turtle(outdir)
         Log.debug "Serialising all initiatives as .rdf"
-        rdf.save_one_big_rdfxml(outdir)
+        rdf.save_one_big_rdfxml
         # Skip saving the one big turtle, because we send only the RDF/XML file to the triplestore
         # and generating this takes a while.
         # Log.debug "Serialising all initiatives as .ttl"
-        #rdf.save_one_big_turtle(outdir)
+        #rdf.save_one_big_turtle
         Log.debug "Serialising all initiatives as .html"
         html.save(outdir)
         Log.debug "Creating SPARQL query"
