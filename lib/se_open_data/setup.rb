@@ -49,7 +49,7 @@ module SeOpenData
     # Gets the first existing file of the list given as parameters.
     # If none exist, return the default.
     def self.first_existing(*files, default: nil)
-      files.find {|it| File.exists? it } || default
+      files.find {|it| File.exist? it } || default
     end
     
     # This defines the input CSV schema we expect (after clean-up an index generation)
