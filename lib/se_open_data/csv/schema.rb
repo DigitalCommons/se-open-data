@@ -89,8 +89,7 @@ module SeOpenData
 
         return map if invalids.empty?
 
-        raise ArgumentError, "these header fields are invalid for this schema :#{@id}, #{headers}, because #{invalids.join('; ')}",
-              cause: error
+        raise ArgumentError, "these header fields are invalid for this schema :#{@id}, #{headers}, because #{invalids.join('; ')}"
       end
 
       # Checks whether this schema has is compatible with another.
