@@ -1,6 +1,7 @@
 
 require 'se_open_data/config'
 require 'se_open_data/csv/schema'
+require 'se_open_data/csv/schemas'
 require 'se_open_data/csv/schema/types'
 require 'se_open_data/geocoding'
 require 'se_open_data/utils/file_cache'
