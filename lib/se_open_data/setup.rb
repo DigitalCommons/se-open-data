@@ -40,10 +40,16 @@ module SeOpenData
     def initialize(config: SeOpenData::Config.load,
                    from_schema: nil,
                    to_schema: nil,
+                   input_csv_opts: nil,
+                   output_csv_opts: nil,
+                   input_file_opts: nil,
                    geocoder_api_key: nil)
       @config = config
       @from_schema = from_schema
       @to_schema = to_schema
+      @input_csv_opts = input_csv_opts
+      @output_csv_opts = output_csv_opts
+      @input_file_opts = input_file_opts
       @geocoder_api_key = geocoder_api_key
     end
 
@@ -199,6 +205,16 @@ module SeOpenData
       @output_csv_opts = value
     end
     
+    # Gets the default input file opts
+    # The default is 'r:bom|utf-8'
+    def input_file_opts
+      @input_file_opts ||= 'r:bom|utf-8'
+    end
+
+    def input_file_opts=(value)
+      @input_file_opts = value
+    end
+    
     # Convert the data using this observer given
     #
     # observer - an observer instance to use, or a Class to instantiate
@@ -218,7 +234,7 @@ module SeOpenData
       )
       
       # Convert the csv to the standard schexma
-      converter.convert File.open(input_file), output_file
+      converter.convert File.open(input_file, input_file_opts), output_file
 
       return self
     rescue => e
