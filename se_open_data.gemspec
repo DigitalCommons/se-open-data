@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 Gem::Specification.new do |s|
   s.name        = 'se_open_data'
-  s.version     = '2.4.0'
+  s.version     = '2.4.1'
   s.licenses    = ['GPL-3.0-or-later']
   s.summary     = "Digital Commons Co-operative Open Data transforms"
   s.description = <<-HERE
