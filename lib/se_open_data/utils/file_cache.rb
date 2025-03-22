@@ -74,16 +74,21 @@ class SeOpenData::Utils::FileCache < SeOpenData::Utils::BaseCache
     Dir.foreach(cache_dir) do |name|
       next if name == '.' or name == '..'
       path = File.join(cache_dir, name)
+      next if Dir.exist? path # skip directories
       # warn "unlink? #{path} -> #{File.exist? path} and #{!@cache.has_key? name}"
       if File.exist? path and !@cache.has_key? name
         File.unlink(path)
       end
+    rescue => e
+      warn "Warning: failed to delete unused file: #{path}: #{e}"
     end
 
     # Save the content
     @cache.each_pair do |key, content|
       path = File.join(cache_dir, key+'.txt')
       IO.write(path, content)
+    rescue => e
+        warn "Warning: failed to create cache file: #{path}: #{e}"      
     end
     
     @loaded_hash = @cache.hash # update this
