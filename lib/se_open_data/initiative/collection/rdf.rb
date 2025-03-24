@@ -40,12 +40,17 @@ module SeOpenData
 	          writer << index_graph
 	        }
 	      end
+              # This gzips the output as ntriples are verbose, and can get large
+              # But writing them is much faster than RDF/XML and TTL!
 	      def save_one_big_ntriples
-	        f = collection.one_big_filename(config.one_big_file_basename, ".nt")
+                require "zlib"
+	        f = collection.one_big_filename(config.one_big_file_basename, ".nt.gz")
 	        Log.info "Saving #{f}..."
-	        ::RDF::NTriples::Writer.open(f) {|writer|
-	          writer << one_big_graph
-	        }
+                Zlib::GzipWriter.open(f) do |gz|
+                  ::RDF::NTriples::Writer.new(gz) do |writer|
+	            writer << one_big_graph
+	          end
+                end
 	      end
 	      def save_one_big_rdfxml
 	        f = collection.one_big_filename(config.one_big_file_basename, ".rdf")
