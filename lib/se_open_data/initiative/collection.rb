@@ -40,6 +40,9 @@ module SeOpenData
         self
       end
       def serialize_everything(outdir)
+        # Save sparql query first, it's small and quick
+        Log.debug "Creating SPARQL query"
+        sparql.save_map_app_sparql_query
         # Create RDF for each initiative
         counter = SeOpenData::Utils::ProgressCounter.new("Saving RDF files for each initiative", size)
         each {|initiative|
@@ -55,16 +58,16 @@ module SeOpenData
         rdf.save_index_rdfxml(outdir)
         Log.debug "Serialising initiative index as .ttl"
         rdf.save_index_turtle(outdir)
-        Log.debug "Serialising all initiatives as .rdf"
-        rdf.save_one_big_rdfxml
-        # Skip saving the one big turtle, because we send only the RDF/XML file to the triplestore
-        # and generating this takes a while.
-        # Log.debug "Serialising all initiatives as .ttl"
+        #Log.debug "Serialising all initiatives as .rdf"
+        #rdf.save_one_big_rdfxml
+
+        # Save the one-biggies last as they are slow, and do them in least order of likely to fail
+        Log.debug "Serialising all initiatives as .n3.gz"
+        rdf.save_one_big_ntriples
+        #Log.debug "Serialising all initiatives as .ttl"
         #rdf.save_one_big_turtle
         Log.debug "Serialising all initiatives as .html"
         html.save(outdir)
-        Log.debug "Creating SPARQL query"
-        sparql.save_map_app_sparql_query
       end
       def index_filename(outdir, ext)
         outdir + IndexBasename + ext
