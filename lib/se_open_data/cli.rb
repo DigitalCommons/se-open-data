@@ -1124,7 +1124,7 @@ DOCS
         begin # Parameters for the import process
           px.auto_load_triplets = _opt :auto_load_triplets, config.AUTO_LOAD_TRIPLETS
           px.graph_uri = _opt :graph_uri, config.GRAPH_NAME
-          px.pattern = _opt :pattern, '*.rdf' # legacy default
+          px.pattern = _opt :pattern, '*' # legacy default
           px.password_id = _opt :password_id, config.VIRTUOSO_PASS_FILE
           px.dbuser = _opt :dbuser, 'dba'
           px.password_from_env = _opt :password_from_env, config.USE_ENV_PASSWORDS 
