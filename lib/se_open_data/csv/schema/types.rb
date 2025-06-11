@@ -181,7 +181,7 @@ module SeOpenData
         # @param quote [String] the sub-field quote character to parse
         # @param outquote [String] the sub-field quote character to output
         def self.multivalue(val, delim: ';', quote: "'", outdelim: ';', outquote: "'")
-          subfields = ::CSV.parse_line(val.to_s, quote_char: quote, col_sep: delim).to_a
+          subfields = multivalue_split(vals, quote: quote, delim: delim)
           new_subfields = subfields.collect {|field| yield field.strip, subfields }.compact
           ::CSV.generate_line(new_subfields,
                               quote_char: outquote, col_sep: outdelim).chomp
@@ -195,6 +195,17 @@ module SeOpenData
         def self.multivalue_join(vals, outquote: "'", outdelim: ';')
           ::CSV.generate_line(vals,
                               quote_char: outquote, col_sep: outdelim).chomp
+        end
+
+        # Splits a multivalue field value by the given delimiter
+        #
+        # @returns an array of the unescaped values
+        #
+        # @param val [String] the multi-value field
+        # @param delim [String] the sub-field delimiter character to parse
+        # @param quote [String] the sub-field quote character to parse
+        def self.multivalue_split(vals, delim: ';', quote: "'")
+          ::CSV.parse_line(vals.to_s, quote_char: quote, col_sep: delim).to_a
         end
 
         # Converts a two-letter country code to a country name.
