@@ -17,10 +17,10 @@ end
 
 # convenience function - runs the method, but shorter
 def invoke(arg, **opts)
-  SeOpenData::CliHelper.invoke_script(arg, **opts)
+  SeOpenData::Cli.invoke_script(arg, **opts)
 end
 
-describe SeOpenData::CliHelper do
+describe SeOpenData::Cli do
   
   describe "#invoke_script" do
 
